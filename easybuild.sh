@@ -2,8 +2,6 @@
 
 set -e
 
-# Farben
-
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -11,7 +9,7 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 log() { echo -e "${GREEN}[$(date +'%H:%M:%S')]${NC} $1"; }
-error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
+error() { echo -e "${RED}[ERROR]${NC} $1"; usage; exit 1; }
 warn() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
 info() { echo -e "${BLUE}[INFO]${NC} $1"; }
 debug() { echo -e "${BLUE}[DEBUG]${NC} $1"; }
@@ -22,9 +20,9 @@ BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Defaults
 
-TYPE="green"
-PARALLEL_JOBS=4
-COUNTRIES=""
+TYPE="water"
+PARALLEL_JOBS=2
+COUNTRIES="" # defaults to all maps in workflows, parsed later from workflows
 OUTPUT_BASE="output"
 
 usage() {
@@ -35,51 +33,52 @@ Local BCS300 Map Builder
 Usage: ./local-batch-build.sh [OPTIONS]
 
 Options:
-    -t TYPE          Build type (default: green)
+    -a               Build all countries
+    -t TYPE          Build type (default: water)
                      - streets-only    : No street names
                      - streets-names   : With street names
                      - water          : With water features
                      - green          : With water + green areas (largest)
     
-    -j JOBS          Parallel jobs (default: 4, max recommended: 8)
+    -j JOBS          Parallel jobs (default: 2)
     -c COUNTRIES     Comma-separated country list (default: all)
     -o OUTPUT        Output directory (default: output)
     -h               Show this help
 
 Examples:
-    # Build all countries with green stuff, 4 parallel jobs
-    ./local-batch-build.sh
+    # Build all countries with water, 2 parallel jobs
+    ./easybuild.sh -a
 
     # Build only water maps, 8 parallel
-    ./local-batch-build.sh -t water -j 8
+    ./easybuild.sh -t water -j 8
 
     # Build specific countries
-    ./local-batch-build.sh -c "albania,germany,switzerland" -t streets-only
+    ./easybuild.sh -c "albania,germany,switzerland" -t streets-only
 
-    # Build single-threaded (for debugging)
-    ./local-batch-build.sh -j 1
+    # Build single-threaded (for debugging or on small machines)
+    ./easybuild.sh -j 1
 
 Available countries:
 EOF
     ls "$BASE_DIR/.github/workflows/build-"*.yml 2>/dev/null | sed 's/.*build-//;s/.yml$//' | sort | sed 's/^/    - /'
-    exit 0
 }
 
 # Parse arguments
 
-while getopts "t:j:c:o:h" opt; do
+while getopts "a:t:j:c:o:h" opt; do
     case $opt in
+        a) COUNTRIES=$(ls "$BASE_DIR/.github/workflows/build-"*.yml 2>/dev/null | sed 's/.*build-//;s/.yml$//' | sort | tr '\n' ',') ;;
         t) TYPE="$OPTARG" ;;
         j) PARALLEL_JOBS="$OPTARG"
-           if [ "$PARALLEL_JOBS" -gt 8 ]; then
-               warn "More than 8 parallel jobs can cause resource issues!"
-               warn "Each job uses ~2GB RAM. Recommended: 2-8 jobs."
+           if [ "$PARALLEL_JOBS" -gt 2 ]; then
+               warn "More than 2 parallel jobs can cause resource issues!"
+               warn "Each job uses up to 8GB RAM. Check your ressources..."
            fi
            ;;
         c) COUNTRIES="$OPTARG" ;;
         o) OUTPUT_BASE="$OPTARG" ;;
-        h) usage ;;
-        *) usage ;;
+        h) usage; exit 0 ;;
+        *) usage; exit 1 ;;
     esac
 done
 
@@ -140,12 +139,7 @@ export -f get_country_code
 
 # Get country list
 
-if [ -z "$COUNTRIES" ]; then
-    COUNTRY_LIST=$(ls "$BASE_DIR/.github/workflows/build-"*.yml 2>/dev/null | sed 's/.*build-//;s/.yml$//' | sort)
-else
-    COUNTRY_LIST=$(echo "$COUNTRIES" | tr ',' '\n')
-fi
-
+COUNTRY_LIST=$(echo "$COUNTRIES" | tr ',' '\n')
 [ -z "$COUNTRY_LIST" ] && error "No countries found!"
 
 # Setup check
@@ -154,9 +148,10 @@ setup_check() {
     log "Checking prerequisites..."
     
     command -v wget >/dev/null 2>&1 || error "wget not found. Install: sudo apt install wget"
-    command -v python3 >/dev/null 2>&1 || error "python3 not found"
-    command -v unzip >/dev/null 2>&1 || error "unzip not found. Install: sudo apt install unzip"
+    command -v python3 >/dev/null 2>&1 || error "python3 not found. Install: sudo apt install python3-numpy"
+    command -v unzip >/dev/null 2>&1 || error "unzip not found. Install: sudo apt install zip"
     command -v gcc >/dev/null 2>&1 || error "gcc not found. Install: sudo apt install gcc"
+    command -v java >/dev/null 2>&1 || error "java not found. Install: sudo apt install default-jre"
     
     python3 -c "import numpy" 2>/dev/null || {
         warn "numpy not found, installing..."
