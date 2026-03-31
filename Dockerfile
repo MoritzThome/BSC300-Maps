@@ -20,6 +20,7 @@ RUN apt update -qq && apt install -qqy --no-install-recommends \
     # Python
     python3 \
     python3-numpy \
+    python3-yaml \
     # Utilities
     unzip \
     parallel \
@@ -35,4 +36,7 @@ WORKDIR /work
 
 COPY . /work/
 
-ENTRYPOINT ["./easybuild.sh"]
+RUN /work/easybuild.sh -p
+
+ENTRYPOINT ["/work/easybuild.sh"]
+CMD ["-h"]
