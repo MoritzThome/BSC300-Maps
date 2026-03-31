@@ -1,0 +1,365 @@
+# Central configuration for all countries and regions, used by easybuild.sh
+# by adding new countries and regions to this file, the CI will generate them
+
+countries:
+  albania:
+    code: AL
+    url: https://download.geofabrik.de/europe/albania-latest.osm.pbf
+    state: "00"
+    
+  andorra:
+    code: AD
+    url: https://download.geofabrik.de/europe/andorra-latest.osm.pbf
+    state: "00"
+    
+  austria:
+    code: AT
+    url: https://download.geofabrik.de/europe/austria-latest.osm.pbf
+    state: "00"
+    
+  belgium:
+    code: BE
+    url: https://download.geofabrik.de/europe/belgium-latest.osm.pbf
+    state: "00"
+    
+  bosnia-herzegovina:
+    code: BA
+    url: https://download.geofabrik.de/europe/bosnia-herzegovina-latest.osm.pbf
+    state: "00"
+    
+  bulgaria:
+    code: BG
+    url: https://download.geofabrik.de/europe/bulgaria-latest.osm.pbf
+    state: "00"
+    
+  croatia:
+    code: HR
+    url: https://download.geofabrik.de/europe/croatia-latest.osm.pbf
+    state: "00"
+    
+  cyprus:
+    code: CY
+    url: https://download.geofabrik.de/europe/cyprus-latest.osm.pbf
+    state: "00"
+    
+  czech-republic:
+    code: CZ
+    url: https://download.geofabrik.de/europe/czech-republic-latest.osm.pbf
+    state: "00"
+    
+  denmark:
+    code: DK
+    url: https://download.geofabrik.de/europe/denmark-latest.osm.pbf
+    state: "00"
+    
+  estonia:
+    code: EE
+    url: https://download.geofabrik.de/europe/estonia-latest.osm.pbf
+    state: "00"
+    
+  finland:
+    code: FI
+    url: https://download.geofabrik.de/europe/finland-latest.osm.pbf
+    state: "00"
+    
+  france:
+    code: FR
+    regions:
+      - name: alsace
+
+        url: https://download.geofabrik.de/europe/france/alsace-latest.osm.pbf
+        state: "11"
+      - name: aquitaine
+
+        url: https://download.geofabrik.de/europe/france/aquitaine-latest.osm.pbf
+        state: "12"
+      - name: auvergne
+
+        url: https://download.geofabrik.de/europe/france/auvergne-latest.osm.pbf
+        state: "13"
+      # Weitere französische Regionen...
+    
+  germany:
+    code: DE
+    regions:
+      - name: baden-wuerttemberg
+
+        url: https://download.geofabrik.de/europe/germany/baden-wuerttemberg-latest.osm.pbf
+        state: "01"
+      - name: bayern
+
+        url: https://download.geofabrik.de/europe/germany/bayern-latest.osm.pbf
+        state: "02"
+      - name: berlin
+
+        url: https://download.geofabrik.de/europe/germany/berlin-latest.osm.pbf
+        state: "03"
+      - name: brandenburg
+
+        url: https://download.geofabrik.de/europe/germany/brandenburg-latest.osm.pbf
+        state: "04"
+      - name: bremen
+
+        url: https://download.geofabrik.de/europe/germany/bremen-latest.osm.pbf
+        state: "05"
+      - name: hamburg
+
+        url: https://download.geofabrik.de/europe/germany/hamburg-latest.osm.pbf
+        state: "06"
+      - name: hessen
+
+        url: https://download.geofabrik.de/europe/germany/hessen-latest.osm.pbf
+        state: "07"
+      - name: mecklenburg-vorpommern
+
+        url: https://download.geofabrik.de/europe/germany/mecklenburg-vorpommern-latest.osm.pbf
+        state: "08"
+      - name: niedersachsen
+
+        url: https://download.geofabrik.de/europe/germany/niedersachsen-latest.osm.pbf
+        state: "09"
+      - name: nordrhein-westfalen
+
+        url: https://download.geofabrik.de/europe/germany/nordrhein-westfalen-latest.osm.pbf
+        state: "10"
+      - name: rheinland-pfalz
+
+        url: https://download.geofabrik.de/europe/germany/rheinland-pfalz-latest.osm.pbf
+        state: "11"
+      - name: saarland
+
+        url: https://download.geofabrik.de/europe/germany/saarland-latest.osm.pbf
+        state: "12"
+      - name: sachsen
+
+        url: https://download.geofabrik.de/europe/germany/sachsen-latest.osm.pbf
+        state: "13"
+      - name: sachsen-anhalt
+
+        url: https://download.geofabrik.de/europe/germany/sachsen-anhalt-latest.osm.pbf
+        state: "14"
+      - name: schleswig-holstein
+
+        url: https://download.geofabrik.de/europe/germany/schleswig-holstein-latest.osm.pbf
+        state: "15"
+      - name: thueringen
+
+        url: https://download.geofabrik.de/europe/germany/thueringen-latest.osm.pbf
+        state: "16"
+    
+  greece:
+    code: GR
+    url: https://download.geofabrik.de/europe/greece-latest.osm.pbf
+    state: "00"
+    
+  hungary:
+    code: HU
+    url: https://download.geofabrik.de/europe/hungary-latest.osm.pbf
+    state: "00"
+    
+  iceland:
+    code: IS
+    url: https://download.geofabrik.de/europe/iceland-latest.osm.pbf
+    state: "00"
+    
+  ireland:
+    code: IE
+    url: https://download.geofabrik.de/europe/ireland-and-northern-ireland-latest.osm.pbf
+    state: "00"
+    
+  italy:
+    code: IT
+    regions:
+      - name: nord-ovest
+
+        url: https://download.geofabrik.de/europe/italy/nord-ovest-latest.osm.pbf
+        state: "01"
+      - name: nord-est
+
+        url: https://download.geofabrik.de/europe/italy/nord-est-latest.osm.pbf
+        state: "02"
+      - name: centro
+
+        url: https://download.geofabrik.de/europe/italy/centro-latest.osm.pbf
+        state: "03"
+      - name: sud
+
+        url: https://download.geofabrik.de/europe/italy/sud-latest.osm.pbf
+        state: "04"
+      - name: isole
+
+        url: https://download.geofabrik.de/europe/italy/isole-latest.osm.pbf
+        state: "05"
+    
+  latvia:
+    code: LV
+    url: https://download.geofabrik.de/europe/latvia-latest.osm.pbf
+    state: "00"
+    
+  liechtenstein:
+    code: LI
+    url: https://download.geofabrik.de/europe/liechtenstein-latest.osm.pbf
+    state: "00"
+    
+  lithuania:
+    code: LT
+    url: https://download.geofabrik.de/europe/lithuania-latest.osm.pbf
+    state: "00"
+    
+  luxembourg:
+    code: LU
+    url: https://download.geofabrik.de/europe/luxembourg-latest.osm.pbf
+    state: "00"
+    
+  malta:
+    code: MT
+    url: https://download.geofabrik.de/europe/malta-latest.osm.pbf
+    state: "00"
+    
+  montenegro:
+    code: ME
+    url: https://download.geofabrik.de/europe/montenegro-latest.osm.pbf
+    state: "00"
+    
+  netherlands:
+    code: NL
+    url: https://download.geofabrik.de/europe/netherlands-latest.osm.pbf
+    state: "00"
+    
+  north-macedonia:
+    code: MK
+    url: https://download.geofabrik.de/europe/macedonia-latest.osm.pbf
+    state: "00"
+    
+  norway:
+    code: "NO"
+    url: https://download.geofabrik.de/europe/norway-latest.osm.pbf
+    state: "00"
+    
+  poland:
+    code: PL
+    url: https://download.geofabrik.de/europe/poland-latest.osm.pbf
+    state: "00"
+    
+  portugal:
+    code: PT
+    url: https://download.geofabrik.de/europe/portugal-latest.osm.pbf
+    state: "00"
+    
+  romania:
+    code: RO
+    url: https://download.geofabrik.de/europe/romania-latest.osm.pbf
+    state: "00"
+    
+  serbia:
+    code: RS
+    url: https://download.geofabrik.de/europe/serbia-latest.osm.pbf
+    state: "00"
+    
+  slovakia:
+    code: SK
+    url: https://download.geofabrik.de/europe/slovakia-latest.osm.pbf
+    state: "00"
+    
+  slovenia:
+    code: SI
+    url: https://download.geofabrik.de/europe/slovenia-latest.osm.pbf
+    state: "00"
+    
+  spain:
+    code: ES
+    regions:
+      - name: andalucia
+
+        url: https://download.geofabrik.de/europe/spain/andalucia-latest.osm.pbf
+        state: "01"
+      - name: aragon
+
+        url: https://download.geofabrik.de/europe/spain/aragon-latest.osm.pbf
+        state: "02"
+      - name: asturias
+
+        url: https://download.geofabrik.de/europe/spain/asturias-latest.osm.pbf
+        state: "03"
+      - name: baleares
+
+        url: https://download.geofabrik.de/europe/spain/baleares-latest.osm.pbf
+        state: "04"
+      - name: canarias
+
+        url: https://download.geofabrik.de/europe/spain/canarias-latest.osm.pbf
+        state: "05"
+      - name: cantabria
+
+        url: https://download.geofabrik.de/europe/spain/cantabria-latest.osm.pbf
+        state: "06"
+      - name: castilla-la-mancha
+
+        url: https://download.geofabrik.de/europe/spain/castilla-la-mancha-latest.osm.pbf
+        state: "07"
+      - name: castilla-y-leon
+
+        url: https://download.geofabrik.de/europe/spain/castilla-y-leon-latest.osm.pbf
+        state: "08"
+      - name: cataluna
+
+        url: https://download.geofabrik.de/europe/spain/cataluna-latest.osm.pbf
+        state: "09"
+      - name: comunidad-valenciana
+
+        url: https://download.geofabrik.de/europe/spain/comunidad-valenciana-latest.osm.pbf
+        state: "10"
+      - name: extremadura
+
+        url: https://download.geofabrik.de/europe/spain/extremadura-latest.osm.pbf
+        state: "11"
+      - name: galicia
+
+        url: https://download.geofabrik.de/europe/spain/galicia-latest.osm.pbf
+        state: "12"
+      - name: madrid
+
+        url: https://download.geofabrik.de/europe/spain/madrid-latest.osm.pbf
+        state: "13"
+      - name: murcia
+
+        url: https://download.geofabrik.de/europe/spain/murcia-latest.osm.pbf
+        state: "14"
+      - name: navarra
+
+        url: https://download.geofabrik.de/europe/spain/navarra-latest.osm.pbf
+        state: "15"
+      - name: pais-vasco
+
+        url: https://download.geofabrik.de/europe/spain/pais-vasco-latest.osm.pbf
+        state: "16"
+      - name: la-rioja
+
+        url: https://download.geofabrik.de/europe/spain/la-rioja-latest.osm.pbf
+        state: "17"
+    
+  sweden:
+    code: SE
+    url: https://download.geofabrik.de/europe/sweden-latest.osm.pbf
+    state: "00"
+    
+  switzerland:
+    code: CH
+    url: https://download.geofabrik.de/europe/switzerland-latest.osm.pbf
+    state: "00"
+    
+  united-kingdom:
+    code: GB
+    regions:
+      - name: england
+
+        url: https://download.geofabrik.de/europe/great-britain/england-latest.osm.pbf
+        state: "01"
+      - name: scotland
+
+        url: https://download.geofabrik.de/europe/great-britain/scotland-latest.osm.pbf
+        state: "02"
+      - name: wales
+
+        url: https://download.geofabrik.de/europe/great-britain/wales-latest.osm.pbf
+        state: "03"

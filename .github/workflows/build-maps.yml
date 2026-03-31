@@ -1,0 +1,90 @@
+name: Build Maps + Container
+
+on:
+  push:
+    branches: ["**"]
+  schedule:
+    - cron: '0 2 1 * *'
+  workflow_dispatch:
+
+
+jobs:
+  build-container:
+    name: Build Container
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build Container
+        run: |
+          IMAGE=$(echo "ghcr.io/${{ github.repository_owner }}/bsc300-maps" | tr '[:upper:]' '[:lower:]')
+          TAG=$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]' | tr '/' '-')
+
+          docker build -t $IMAGE:$TAG .
+          
+      - name: Push Container
+        run: |
+          docker push $IMAGE:$TAG
+
+          if [ "$TAG" = "main" ]; then
+            docker tag $IMAGE:$TAG $IMAGE:latest
+            docker push $IMAGE:latest
+          fi
+          docker images $IMAGE:$TAG
+          echo "IMAGE=$IMAGE:$TAG" >> $GITHUB_OUTPUT
+
+  build-maps:
+    name: Build Maps (${{ matrix.type }})
+    runs-on: ubuntu-latest
+    needs: build-container
+    strategy:
+      matrix:
+        type: [streets-only, streets-names, water, green]
+    container:
+      image: ${{ needs.build-container.outputs.IMAGE }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Build map
+        run: ./easybuild.sh -a -t ${{ matrix.type }} -j 2 -v
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: maps-${{ matrix.type }}
+          path: output/${{ matrix.type }}/*.map
+          retention-days: 90
+
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: build-maps
+    if: github.event_name == 'schedule'
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: downloaded
+
+      - name: Create release archives
+        run: |
+          mkdir -p release
+          for dir in downloaded/*; do
+            type=$(basename "$dir")
+            zip -r "release/${type}-$(date +%Y%m%d).zip" "$dir"
+          done
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: maps-$(date +%Y%m%d)
+          name: Maps Build $(date +%Y-%m-%d)
+          body: "Automated map build release"
+          files: release/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
