@@ -14,7 +14,7 @@ jobs:
     permissions:
       packages: write
     outputs:
-      IMAGE_TAG: ${{ steps.set-image.outputs.IMAGE_TAG }}
+      IMAGE: ${{ steps.set-image.outputs.IMAGE }}
       TAG: ${{ steps.set-image.outputs.TAG }}
     steps:
       - uses: actions/checkout@v6
@@ -25,22 +25,22 @@ jobs:
       - name: Build Container
         id: set-image
         run: |
-          IMAGE=$(echo "ghcr.io/${{ github.repository_owner }}/bsc300-maps" | tr '[:upper:]' '[:lower:]')
+          IMAGE=$(echo "ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')
           TAG=$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]' | tr '/' '-')
 
-          docker build -t $IMAGE_TAG .
+          docker build -t $IMAGE:$TAG .
 
           echo "IMAGE=$IMAGE" >> $GITHUB_OUTPUT
           echo "TAG=$TAG" >> $GITHUB_OUTPUT
 
       - name: Push Container
         run: |
-          docker push ${{ needs.build-container.outputs.IMAGE }}:${{ needs.build-container.outputs.TAG }}
-          if [ "${{ needs.build-container.outputs.TAG }}" = "main" ]; then
-            docker tag ${{ needs.build-container.outputs.IMAGE }}:${{ needs.build-container.outputs.TAG }} ${{ needs.build-container.outputs.IMAGE }}:latest
-            docker push ${{ needs.build-container.outputs.IMAGE }}:latest
+          docker push ${{ steps.set-image.outputs.IMAGE }}:${{ steps.set-image.outputs.TAG }}
+          if [ "${{ steps.set-image.outputs.TAG }}" = "main" ] || [ "${{ steps.set-image.outputs.TAG }}" = "master" ]; then
+            docker tag ${{ steps.set-image.outputs.IMAGE }}:${{ steps.set-image.outputs.TAG }} ${{ steps.set-image.outputs.IMAGE }}:latest
+            docker push ${{ steps.set-image.outputs.IMAGE }}:latest
           fi
-          docker images ${{ needs.build-container.outputs.IMAGE }}
+          docker images ${{ steps.set-image.outputs.IMAGE }}
 
 
   build-maps:

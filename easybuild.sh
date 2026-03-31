@@ -1,4 +1,5 @@
 #!/bin/bash
+
 set -e
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
@@ -25,7 +26,7 @@ usage() {
         local var="MAP_TYPE_DESC_$(echo $t | tr '[:lower:]-' '[:upper:]_')"
         printf "  %-15s : %s\n" "$t" "${!var}"
     done
-    exit 0
+    exit 1
 }
 
 while getopts "at:j:c:o:vh" opt; do
