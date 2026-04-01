@@ -97,7 +97,7 @@ while getopts "pat:j:c:o:vh" opt; do
         t) TYPE="$OPTARG" ;;
         j) PARALLEL_JOBS="$OPTARG"
            if [ "$PARALLEL_JOBS" -gt 2 ]; then
-               warn "More than 2 parallel jobs can cause resource issues!"
+               warn "More than 2 parallel jobs can cause resource -  depending on your machine!"
            fi
            ;;
         c) COUNTRIES="$OPTARG" ;;
@@ -215,7 +215,6 @@ build_single() {
     mkdir -p "$work_dir" "$output_dir"
     cd "$work_dir"
     
-    info "════════════════════════════════════════════════════════════"
     info "Building: $country/$region ($TYPE)"
     debug "Country Code: $countrycode | State: $state"
     
