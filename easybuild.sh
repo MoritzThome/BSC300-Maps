@@ -317,6 +317,37 @@ build_single() {
 
 export -f build_single
 
+# Progress tracking wrapper
+
+build_with_progress() {
+    local task_file="$1"
+    local current="$2"
+    local total="$3"
+    local start_time="$4"
+    
+    # Calculate progress
+    local percent=$((current * 100 / total))
+    local elapsed=$(($(date +%s) - start_time))
+    local elapsed_human=$(format_duration $elapsed)
+    
+    # Calculate ETA (based on average time per task)
+    local remaining=$((total - current))
+    local eta=""
+    if [ $current -gt 0 ]; then
+        local avg_time=$((elapsed / current))
+        local eta_seconds=$((avg_time * remaining))
+        eta=" | ETA: $(format_duration $eta_seconds)"
+    fi
+    
+    # Show progress
+    log "Progress: $current/$total ($percent%) | Elapsed: $elapsed_human$eta"
+    
+    # Build the task
+    build_single "$task_file"
+}
+
+export -f build_with_progress
+
 # Main
 
 START_TIME=$(date +%s)
@@ -357,10 +388,42 @@ log "Building $TOTAL_TASKS map(s)"
 
 if command -v parallel >/dev/null 2>&1 && [ "$PARALLEL_JOBS" -gt 1 ]; then
     log "Using GNU parallel with $PARALLEL_JOBS jobs"
-    ls "$TASKS_DIR"/task_*.txt | parallel -j "$PARALLEL_JOBS" build_single {}
+    
+    # Create numbered task list with start time
+    TASK_LIST=$(mktemp)
+    TASK_NUM=0
+    for task in "$TASKS_DIR"/task_*.txt; do
+        TASK_NUM=$((TASK_NUM + 1))
+        echo "$task $TASK_NUM $TOTAL_TASKS $START_TIME" >> "$TASK_LIST"
+    done
+    
+    # Run with progress tracking
+    cat "$TASK_LIST" | parallel -j "$PARALLEL_JOBS" --colsep ' ' build_with_progress {1} {2} {3} {4}
+    
+    rm "$TASK_LIST"
 else
     [ "$PARALLEL_JOBS" -gt 1 ] && warn "GNU parallel not found, using sequential"
+    
+    CURRENT=0
     for task_file in "$TASKS_DIR"/task_*.txt; do
+        CURRENT=$((CURRENT + 1))
+        
+        # Calculate progress
+        local percent=$((CURRENT * 100 / TOTAL_TASKS))
+        local elapsed=$(($(date +%s) - START_TIME))
+        local elapsed_human=$(format_duration $elapsed)
+        
+        # Calculate ETA
+        local remaining=$((TOTAL_TASKS - CURRENT))
+        local eta=""
+        if [ $CURRENT -gt 1 ]; then
+            local avg_time=$((elapsed / (CURRENT - 1)))
+            local eta_seconds=$((avg_time * remaining))
+            eta=" | ETA: $(format_duration $eta_seconds)"
+        fi
+        
+        log "Progress: $CURRENT/$TOTAL_TASKS ($percent%) | Elapsed: $elapsed_human$eta"
+        
         build_single "$task_file"
     done
 fi

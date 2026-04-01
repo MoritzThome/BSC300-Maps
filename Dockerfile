@@ -30,7 +30,7 @@ RUN apt update -qq && apt install -qqy --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* \
     && rm -rf /tmp/*
 
-ENV JAVA_TOOL_OPTIONS="-Xmx4g"
+ENV JAVA_TOOL_OPTIONS="-Xmx8g"
 
 WORKDIR /work
 
