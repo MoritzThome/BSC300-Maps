@@ -294,7 +294,6 @@ build_single() {
     fi
     
     # Move generated maps
-    log "→ Looking for generated maps..."
     local moved_count=0
     for mapfile in *.map; do
         if [ -f "$mapfile" ] && [ "$mapfile" != "*.map" ]; then
