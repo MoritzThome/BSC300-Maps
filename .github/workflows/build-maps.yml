@@ -17,6 +17,7 @@ jobs:
     outputs:
       IMAGE: ${{ steps.set-image.outputs.IMAGE }}
       TAG: ${{ steps.set-image.outputs.TAG }}
+      IMAGE_DIGEST: ${{ steps.push.outputs.IMAGE_DIGEST }}
     steps:
       - uses: actions/checkout@v6
 
@@ -37,7 +38,7 @@ jobs:
           echo "TAG=$TAG" >> $GITHUB_OUTPUT
 
       - name: Push Container
-
+        id: push
         run: |
           docker push ${{ steps.set-image.outputs.IMAGE }}:${{ steps.set-image.outputs.TAG }}
           if [ "${{ steps.set-image.outputs.TAG }}" = "main" ] || [ "${{ steps.set-image.outputs.TAG }}" = "master" ]; then
@@ -45,6 +46,17 @@ jobs:
             docker push ${{ steps.set-image.outputs.IMAGE }}:latest
           fi
           docker images ${{ steps.set-image.outputs.IMAGE }}
+          
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ${{ steps.set-image.outputs.IMAGE }}:${{ steps.set-image.outputs.TAG }} | cut -d'@' -f2)
+          echo "IMAGE_DIGEST=${{ steps.set-image.outputs.IMAGE }}@$DIGEST" >> $GITHUB_OUTPUT
+          echo "DIGEST for next stage: ${{ steps.set-image.outputs.IMAGE }}@$DIGEST"
+    
+      - uses: actions/delete-package-versions@v5
+        with: 
+            package-name: 'bsc300-maps'
+            package-type: 'container'
+            min-versions-to-keep: 10
+            delete-only-untagged-versions: 'true'
 
 
   generate-build-matrix:
@@ -84,7 +96,7 @@ jobs:
       matrix: ${{ fromJson(needs.generate-build-matrix.outputs.matrix) }}
     
     container:
-      image: ${{ needs.build-container.outputs.IMAGE }}:${{ needs.build-container.outputs.TAG }}
+      image: ${{ needs.build-container.outputs.IMAGE_DIGEST }}
     
     steps:
       - name: Build all map types for country
