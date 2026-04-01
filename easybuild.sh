@@ -38,7 +38,7 @@ BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 source "$BASE_DIR/map-types.conf" || error "Failed to load map-types.conf"
 
-TYPE="water"
+TYPES=()
 PARALLEL_JOBS=2
 COUNTRIES=""
 OUTPUT_BASE="output"
@@ -54,7 +54,8 @@ Usage: ./easybuild.sh [OPTIONS]
 Options:
     -p               Prepare only (download & compile tools, no maps)
     -a               Build all countries
-    -t TYPE          Build type (default: water)
+    -t TYPE[,TYPE]   Build type(s) (default: all types)
+                     Comma-separated for multiple, e.g. -t water,green
 EOF
     
     for map_type in $AVAILABLE_MAP_TYPES; do
@@ -73,11 +74,11 @@ Examples:
     # Prepare environment (for Dockerfile)
     ./easybuild.sh -p
 
-    # Build all countries
+    # Build all countries, all types
     ./easybuild.sh -a
 
-    # Build with verbose
-    ./easybuild.sh -t water -j 8 -v
+    # Build specific type for Germany with 8 parallel jobs
+    ./easybuild.sh -t water -c germany -j 8 -v
 
 Available countries:
 EOF
@@ -94,10 +95,15 @@ while getopts "pat:j:c:o:vh" opt; do
     case $opt in
         p) PREPARE_ONLY=true ;;
         a) COUNTRIES="all" ;;
-        t) TYPE="$OPTARG" ;;
+        t) 
+            IFS=',' read -ra TYPES <<< "$OPTARG"
+            for t in "${TYPES[@]}"; do
+                is_valid_map_type "$t" || error "Invalid type: $t. Available: $AVAILABLE_MAP_TYPES"
+            done
+            ;;
         j) PARALLEL_JOBS="$OPTARG"
-           if [ "$PARALLEL_JOBS" -gt 2 ]; then
-               warn "More than 2 parallel jobs can cause resource -  depending on your machine!"
+           if [ "$PARALLEL_JOBS" -gt 4 ]; then
+               warn "More than 4 parallel jobs can cause high resource usage!"
            fi
            ;;
         c) COUNTRIES="$OPTARG" ;;
@@ -108,12 +114,18 @@ while getopts "pat:j:c:o:vh" opt; do
     esac
 done
 
-# Prepare mode: setup everything, then exit
+# Default: wenn keine types angegeben, alle bauen
+
+if [ ${#TYPES[@]} -eq 0 ]; then
+    read -ra TYPES <<< "$AVAILABLE_MAP_TYPES"
+    info "No type specified, building all: ${TYPES[*]}"
+fi
+
+# Prepare mode
 
 if [ "$PREPARE_ONLY" = true ]; then
     log "Preparing environment..."
     
-    # Check basic tools
     log "Checking system tools..."
     command -v wget >/dev/null 2>&1 || error "wget not found. Install: sudo apt install wget"
     command -v python3 >/dev/null 2>&1 || error "python3 not found. Install: sudo apt install python3"
@@ -123,7 +135,6 @@ if [ "$PREPARE_ONLY" = true ]; then
     command -v parallel >/dev/null 2>&1 || warn "GNU parallel not found. Install for faster builds: sudo apt install parallel"
     log "✓ System tools OK"
     
-    # Check/install Python packages
     log "Checking Python packages..."
     python3 -c "import numpy" 2>/dev/null || {
         log "Installing numpy..."
@@ -135,9 +146,8 @@ if [ "$PREPARE_ONLY" = true ]; then
     }
     log "✓ Python packages OK"
     
-    # Setup osmosis
     if [ ! -d "$BASE_DIR/osmosis/bin" ] || [ ! -f "$BASE_DIR/osmosis/osmconvert" ]; then
-        log "Setting up osmosis and tools (this may take a moment)..."
+        log "Setting up osmosis and tools..."
         cd "$BASE_DIR"
         if [ "$VERBOSE" = true ]; then
             bash setup_env.sh || error "Failed to setup osmosis"
@@ -148,7 +158,6 @@ if [ "$PREPARE_ONLY" = true ]; then
         log "✓ Osmosis already installed"
     fi
     
-    # Verify installation
     log "Verifying installation..."
     [ ! -f "$BASE_DIR/osmosis/osmconvert" ] && error "osmosis/osmconvert not found!"
     [ ! -f "$BASE_DIR/osmosis/osmfilter" ] && error "osmosis/osmfilter not found!"
@@ -165,10 +174,6 @@ if [ "$PREPARE_ONLY" = true ]; then
     exit 0
 fi
 
-# Normal mode: validate type
-
-is_valid_map_type "$TYPE" || error "Invalid type: $TYPE. Use: $AVAILABLE_MAP_TYPES"
-
 parse_countries() {
     python3 - "$CONFIG_FILE" "$COUNTRIES" << 'PYEOF'
 import sys, yaml
@@ -183,13 +188,9 @@ for c in countries:
 PYEOF
 }
 
-export -f format_duration log info warn error debug
-export VERBOSE TYPE OUTPUT_BASE BASE_DIR
-
 runtime_check() {
     log "Checking runtime prerequisites..."
     
-    # Quick check that tools exist (already installed in prepare)
     [ ! -f "$BASE_DIR/osmosis/osmconvert" ] && error "osmosis not found! Run with -p first."
     [ ! -f "$BASE_DIR/osmosis/osmfilter" ] && error "osmfilter not found! Run with -p first."
     [ ! -f "$BASE_DIR/generate_map.py" ] && error "generate_map.py not found!"
@@ -201,25 +202,22 @@ runtime_check() {
     log "✓ Runtime check passed"
 }
 
-build_single() {
+# Phase 1: Download and convert
+
+download_and_convert() {
     local task_file="$1"
-    
-    # Load config in subshell
-    source "$BASE_DIR/map-types.conf"
+    local work_base="$2"
     
     IFS=$'\t' read -r country region url state countrycode < "$task_file"
     
-    local work_dir="$BASE_DIR/$OUTPUT_BASE/.tmp/${country}-${region}-$$-$RANDOM"
-    local output_dir="$BASE_DIR/$OUTPUT_BASE/${TYPE}"
+    local region_work="${work_base}/${country}-${region}"
+    mkdir -p "$region_work"
+    cd "$region_work"
     
-    mkdir -p "$work_dir" "$output_dir"
-    cd "$work_dir"
-    
-    info "Building: $country/$region ($TYPE)"
-    debug "Country Code: $countrycode | State: $state"
+    info "Phase 1: $country/$region - Download & Convert"
     
     # Download
-    log "→ Downloading OSM data..."
+    log "  → Downloading OSM data..."
     if [ "$VERBOSE" = true ]; then
         wget --show-progress "$url" -O tmp.pbf 2>&1
     else
@@ -227,220 +225,307 @@ build_single() {
     fi
     
     if [ ! -s tmp.pbf ]; then
-        warn "Download failed: $country/$region"
-        cd "$BASE_DIR" && rm -rf "$work_dir"
+        warn "  Download failed: $country/$region"
+        echo "FAILED" > status.txt
         return 1
     fi
-    debug "Downloaded: $(du -h tmp.pbf | cut -f1)"
     
     # Convert to O5M
-    log "→ Converting to O5M..."
+    log "  → Converting to O5M..."
     if [ "$VERBOSE" = true ]; then
         "$BASE_DIR/osmosis/osmconvert" tmp.pbf -o=tmp.o5m
     else
         "$BASE_DIR/osmosis/osmconvert" tmp.pbf -o=tmp.o5m >/dev/null 2>&1
     fi
+    
+    if [ ! -s tmp.o5m ]; then
+        warn "  Convert failed: $country/$region"
+        echo "FAILED" > status.txt
+        return 1
+    fi
+    
     rm tmp.pbf
-    debug "Converted: $(du -h tmp.o5m | cut -f1)"
+    echo "OK" > status.txt
+    log "  ✓ Ready for type builds"
+}
+
+# Phase 2: Build one type for one region
+
+build_type() {
+    local task_file="$1"
     
-    # Filter using function from config
-    log "→ Filtering ($TYPE)..."
-    local filter_cmd=$(get_filter_cmd "$TYPE" "$VERBOSE" "$BASE_DIR/osmosis/osmfilter")
-    eval "$filter_cmd > tmp1.o5m"
-    rm tmp.o5m
-    debug "Filtered: $(du -h tmp1.o5m | cut -f1)"
+    # Read task info
+    IFS=$'\t' read -r region_work type code state country region < "$task_file"
     
-    # Modify tags using function from config
-    log "→ Modifying tags..."
-    local modify_cmd=$(get_modify_cmd "$TYPE" "$VERBOSE" "$BASE_DIR/osmosis/osmfilter")
-    eval "$modify_cmd > tmp_filtered.o5m"
+    # Check phase 1 success
+    if [ ! -f "$region_work/status.txt" ] || [ "$(cat "$region_work/status.txt")" != "OK" ]; then
+        warn "Skipping $country/$region/$type - Phase 1 failed"
+        return 1
+    fi
+    
+    if [ ! -f "$region_work/tmp.o5m" ]; then
+        warn "Skipping $country/$region/$type - tmp.o5m not found"
+        return 1
+    fi
+    
+    # Source map-types in subshell
+    source "$BASE_DIR/map-types.conf"
+    
+    local type_work="${region_work}/${type}"
+    mkdir -p "$type_work"
+    cd "$type_work"
+    
+    info "Phase 2: $country/$region/$type - Building map"
+    
+    local output_dir="$BASE_DIR/$OUTPUT_BASE/${type}"
+    mkdir -p "$output_dir"
+    
+    # Filter
+    log "  → Filtering ($type)..."
+    local filter_cmd=$(get_filter_cmd "$type" "$VERBOSE" "$BASE_DIR/osmosis/osmfilter")
+    filter_cmd="${filter_cmd/tmp.o5m/../tmp.o5m}"
+    eval "$filter_cmd > tmp1.o5m" 2>&1 || { warn "  Filter failed"; return 1; }
+    
+    # Modify
+    log "  → Modifying tags..."
+    local modify_cmd=$(get_modify_cmd "$type" "$VERBOSE" "$BASE_DIR/osmosis/osmfilter")
+    eval "$modify_cmd > tmp_filtered.o5m" 2>&1 || { warn "  Modify failed"; rm tmp1.o5m; return 1; }
     rm tmp1.o5m
-    debug "Modified: $(du -h tmp_filtered.o5m | cut -f1)"
     
     # Convert to PBF
-    log "→ Converting to PBF..."
+    log "  → Converting to PBF..."
     if [ "$VERBOSE" = true ]; then
         "$BASE_DIR/osmosis/osmconvert" tmp_filtered.o5m -o=tmp_filtered.pbf
     else
         "$BASE_DIR/osmosis/osmconvert" tmp_filtered.o5m -o=tmp_filtered.pbf >/dev/null 2>&1
     fi
     rm tmp_filtered.o5m
-    debug "Final PBF: $(du -h tmp_filtered.pbf | cut -f1)"
     
     # Build map
-    log "→ Building map with Mapsforge..."
+    log "  → Building map with Mapsforge..."
     local abs_input="$(pwd)/tmp_filtered.pbf"
-    local tag_file=$(get_tag_file "$TYPE")
+    local tag_file=$(get_tag_file "$type")
     local abs_tag_file="$BASE_DIR/$tag_file"
     
-    # Symlink osmosis in working directory
-    ln -sf "$BASE_DIR/osmosis" osmosis
+    [ ! -L osmosis ] && ln -sf "$BASE_DIR/osmosis" osmosis
     
-    debug "Input: $abs_input"
-    debug "Tag file: $abs_tag_file"
-    
-    # Verify tag file exists
     if [ ! -f "$abs_tag_file" ]; then
-        warn "Tag file not found: $abs_tag_file"
-        cd "$BASE_DIR" && rm -rf "$work_dir"
+        warn "  Tag file not found: $abs_tag_file"
+        rm tmp_filtered.pbf
         return 1
     fi
     
     if [ "$VERBOSE" = true ]; then
-        python3 "$BASE_DIR/generate_map.py" -i "$abs_input" -c "$countrycode" -s "$state" -t "$abs_tag_file"
+        python3 "$BASE_DIR/generate_map.py" -i "$abs_input" -c "$code" -s "$state" -t "$abs_tag_file"
     else
-        python3 "$BASE_DIR/generate_map.py" -i "$abs_input" -c "$countrycode" -s "$state" -t "$abs_tag_file" >/dev/null 2>&1
+        python3 "$BASE_DIR/generate_map.py" -i "$abs_input" -c "$code" -s "$state" -t "$abs_tag_file" >/dev/null 2>&1
     fi
     
-    # Move generated maps
-    local moved_count=0
+    # Move maps
+    local moved=0
     for mapfile in *.map; do
-        if [ -f "$mapfile" ] && [ "$mapfile" != "*.map" ]; then
-            debug "Found: $mapfile ($(du -h "$mapfile" | cut -f1))"
-            
-            if [[ "$mapfile" == ${countrycode}${state}* ]]; then
-                log "✓ Created: $mapfile"
-                mv "$mapfile" "${output_dir}/"
-                moved_count=$((moved_count + 1))
-            else
-                warn "Wrong format: $mapfile"
-                mv "$mapfile" "${output_dir}/${mapfile}.wrong-format"
-            fi
+        [ -f "$mapfile" ] && [ "$mapfile" != "*.map" ] || continue
+        
+        if [[ "$mapfile" == ${code}${state}* ]]; then
+            log "  ✓ Created: $mapfile"
+            mv "$mapfile" "${output_dir}/"
+            moved=$((moved + 1))
+        else
+            warn "  Wrong format: $mapfile"
+            mv "$mapfile" "${output_dir}/${mapfile}.wrong-format"
         fi
     done
     
-    [ $moved_count -eq 0 ] && warn "No map file created for $country/$region"
+    [ $moved -eq 0 ] && warn "  No map created for $type"
     
-    cd "$BASE_DIR"
-    rm -rf "$work_dir"
+    rm tmp_filtered.pbf 2>/dev/null || true
 }
 
-export -f build_single
+# Export functions for parallel
 
-# Progress tracking wrapper
+export -f download_and_convert build_type format_duration log info warn error debug
+export -f get_filter_cmd get_modify_cmd get_tag_file get_description is_valid_map_type
+export VERBOSE BASE_DIR OUTPUT_BASE
 
-build_with_progress() {
-    local task_file="$1"
-    local current="$2"
-    local total="$3"
-    local start_time="$4"
-    
-    # Calculate progress
-    local percent=$((current * 100 / total))
-    local elapsed=$(($(date +%s) - start_time))
-    local elapsed_human=$(format_duration $elapsed)
-    
-    # Calculate ETA (based on average time per task)
-    local remaining=$((total - current))
-    local eta=""
-    if [ $current -gt 0 ]; then
-        local avg_time=$((elapsed / current))
-        local eta_seconds=$((avg_time * remaining))
-        eta=" | ETA: $(format_duration $eta_seconds)"
-    fi
-    
-    # Show progress
-    log "Progress: $current/$total ($percent%) | Elapsed: $elapsed_human$eta"
-    
-    # Build the task
-    build_single "$task_file"
-}
+# ═══════════════════════════════════════════════════════════
 
-export -f build_with_progress
+# MAIN EXECUTION
 
-# Main
+# ═══════════════════════════════════════════════════════════
 
 START_TIME=$(date +%s)
 
 runtime_check
 
-log "Starting batch build"
-info "Type: $TYPE ($(get_description "$TYPE"))"
-info "Parallel jobs: $PARALLEL_JOBS | Verbose: $VERBOSE"
-info "Output: $BASE_DIR/$OUTPUT_BASE/$TYPE/"
+log "════════════════════════════════════════════"
+log "Starting 2-Phase Build Process"
+info "Types: ${TYPES[*]} (${#TYPES[@]} type(s))"
+info "Parallel jobs: $PARALLEL_JOBS"
+info "Output: $BASE_DIR/$OUTPUT_BASE/"
+log "════════════════════════════════════════════"
 
 [ -z "$COUNTRIES" ] && COUNTRIES="all"
 
-TASKS_DIR=$(mktemp -d)
-ALL_TASKS=$(mktemp)
+# Create work directory
 
-parse_countries > "$ALL_TASKS" 2>&1
+WORK_DIR="$BASE_DIR/$OUTPUT_BASE/.work-$$"
+mkdir -p "$WORK_DIR"
 
-if [ ! -s "$ALL_TASKS" ]; then
-    rm -rf "$TASKS_DIR" "$ALL_TASKS"
+# Parse regions
+
+ALL_REGIONS=$(mktemp)
+parse_countries > "$ALL_REGIONS" 2>&1
+
+if [ ! -s "$ALL_REGIONS" ]; then
+    rm -rf "$WORK_DIR" "$ALL_REGIONS"
     error "No valid countries found!"
 fi
 
-TASK_NUM=0
-while IFS=$'\t' read -r c r u s code; do
-    [ -z "$c" ] && continue
-    TASK_NUM=$((TASK_NUM + 1))
-    printf "%s\t%s\t%s\t%s\t%s\n" "$c" "$r" "$u" "$s" "$code" > "$TASKS_DIR/task_${TASK_NUM}.txt"
-done < "$ALL_TASKS"
+# Create phase 1 task files
 
-rm "$ALL_TASKS"
+PHASE1_DIR="$WORK_DIR/phase1-tasks"
+mkdir -p "$PHASE1_DIR"
 
-TOTAL_TASKS=$(ls "$TASKS_DIR"/task_*.txt 2>/dev/null | wc -l)
+REGION_COUNT=0
+while IFS=$'\t' read -r country region url state code; do
+    [ -z "$country" ] && continue
+    REGION_COUNT=$((REGION_COUNT + 1))
+    printf "%s\t%s\t%s\t%s\t%s\n" "$country" "$region" "$url" "$state" "$code" > "$PHASE1_DIR/region_${REGION_COUNT}.txt"
+done < "$ALL_REGIONS"
 
-[ "$TOTAL_TASKS" -eq 0 ] && { rm -rf "$TASKS_DIR"; error "No tasks found!"; }
+rm "$ALL_REGIONS"
 
-log "Building $TOTAL_TASKS map(s)"
+[ "$REGION_COUNT" -eq 0 ] && { rm -rf "$WORK_DIR"; error "No regions found!"; }
+
+log "Found $REGION_COUNT region(s) to process"
+
+# ═══════════════════════════════════════════════════════════
+
+# PHASE 1: Download & Convert
+
+# ═══════════════════════════════════════════════════════════
+
+log ""
+log "═══════════════════════════════════════════"
+log "PHASE 1: Download & Convert Regions"
+log "═══════════════════════════════════════════"
+
+PHASE1_START=$(date +%s)
 
 if command -v parallel >/dev/null 2>&1 && [ "$PARALLEL_JOBS" -gt 1 ]; then
     log "Using GNU parallel with $PARALLEL_JOBS jobs"
-    
-    # Create numbered task list with start time
-    TASK_LIST=$(mktemp)
-    TASK_NUM=0
-    for task in "$TASKS_DIR"/task_*.txt; do
-        TASK_NUM=$((TASK_NUM + 1))
-        echo "$task $TASK_NUM $TOTAL_TASKS $START_TIME" >> "$TASK_LIST"
-    done
-    
-    # Run with progress tracking
-    cat "$TASK_LIST" | parallel -j "$PARALLEL_JOBS" --colsep ' ' build_with_progress {1} {2} {3} {4}
-    
-    rm "$TASK_LIST"
+    ls "$PHASE1_DIR"/region_*.txt | parallel -j "$PARALLEL_JOBS" download_and_convert {} "$WORK_DIR"
 else
     [ "$PARALLEL_JOBS" -gt 1 ] && warn "GNU parallel not found, using sequential"
-    
-    CURRENT=0
-    for task_file in "$TASKS_DIR"/task_*.txt; do
-        CURRENT=$((CURRENT + 1))
-        
-        # Calculate progress
-        local percent=$((CURRENT * 100 / TOTAL_TASKS))
-        local elapsed=$(($(date +%s) - START_TIME))
-        local elapsed_human=$(format_duration $elapsed)
-        
-        # Calculate ETA
-        local remaining=$((TOTAL_TASKS - CURRENT))
-        local eta=""
-        if [ $CURRENT -gt 1 ]; then
-            local avg_time=$((elapsed / (CURRENT - 1)))
-            local eta_seconds=$((avg_time * remaining))
-            eta=" | ETA: $(format_duration $eta_seconds)"
-        fi
-        
-        log "Progress: $CURRENT/$TOTAL_TASKS ($percent%) | Elapsed: $elapsed_human$eta"
-        
-        build_single "$task_file"
+    for task_file in "$PHASE1_DIR"/region_*.txt; do
+        download_and_convert "$task_file" "$WORK_DIR"
     done
 fi
 
-rm -rf "$TASKS_DIR"
+PHASE1_END=$(date +%s)
+PHASE1_DURATION=$((PHASE1_END - PHASE1_START))
+
+log "Phase 1 completed in $(format_duration $PHASE1_DURATION)"
+
+# Check successful downloads
+
+SUCCEEDED=0
+for region_dir in "$WORK_DIR"/*; do
+    [ ! -d "$region_dir" ] && continue
+    [ "$(basename "$region_dir")" = "phase1-tasks" ] && continue
+    [ -f "$region_dir/status.txt" ] && [ "$(cat "$region_dir/status.txt")" = "OK" ] && SUCCEEDED=$((SUCCEEDED + 1))
+done
+
+log "Successful downloads: $SUCCEEDED/$REGION_COUNT"
+
+[ $SUCCEEDED -eq 0 ] && error "No regions downloaded successfully!"
+
+# ═══════════════════════════════════════════════════════════
+
+# PHASE 2: Build Types
+
+# ═══════════════════════════════════════════════════════════
+
+log ""
+log "═══════════════════════════════════════════"
+log "PHASE 2: Build Map Types"
+log "═══════════════════════════════════════════"
+
+PHASE2_START=$(date +%s)
+
+# Create phase 2 task files
+
+PHASE2_DIR="$WORK_DIR/phase2-tasks"
+mkdir -p "$PHASE2_DIR"
+
+TASK_COUNT=0
+for task_file in "$PHASE1_DIR"/region_*.txt; do
+    IFS=$'\t' read -r country region url state code < "$task_file"
+    region_work="$WORK_DIR/${country}-${region}"
+    
+    # Only for successful phase 1
+    if [ -f "$region_work/status.txt" ] && [ "$(cat "$region_work/status.txt")" = "OK" ]; then
+        for type in "${TYPES[@]}"; do
+            TASK_COUNT=$((TASK_COUNT + 1))
+            printf "%s\t%s\t%s\t%s\t%s\t%s\n" "$region_work" "$type" "$code" "$state" "$country" "$region" > "$PHASE2_DIR/task_${TASK_COUNT}.txt"
+        done
+    fi
+done
+
+log "Building $TASK_COUNT map(s) ($SUCCEEDED regions × ${#TYPES[@]} types)"
+
+if command -v parallel >/dev/null 2>&1 && [ "$PARALLEL_JOBS" -gt 1 ]; then
+    log "Using GNU parallel with $PARALLEL_JOBS jobs"
+    ls "$PHASE2_DIR"/task_*.txt | parallel -j "$PARALLEL_JOBS" build_type {}
+else
+    for task_file in "$PHASE2_DIR"/task_*.txt; do
+        build_type "$task_file"
+    done
+fi
+
+PHASE2_END=$(date +%s)
+PHASE2_DURATION=$((PHASE2_END - PHASE2_START))
+
+log "Phase 2 completed in $(format_duration $PHASE2_DURATION)"
+
+# ═══════════════════════════════════════════════════════════
+
+# CLEANUP
+
+# ═══════════════════════════════════════════════════════════
+
+log ""
+log "Cleaning up temporary files..."
+rm -rf "$WORK_DIR"
 
 END_TIME=$(date +%s)
-DURATION=$((END_TIME - START_TIME))
+TOTAL_DURATION=$((END_TIME - START_TIME))
 
+log ""
 log "════════════════════════════════════════════"
-log "Build complete! Time: $(format_duration $DURATION)"
-log "Output: $BASE_DIR/$OUTPUT_BASE/$TYPE/"
+log "Build Complete!"
+log "════════════════════════════════════════════"
+log "Total time: $(format_duration $TOTAL_DURATION)"
+log "  Phase 1 (Download): $(format_duration $PHASE1_DURATION)"
+log "  Phase 2 (Build):    $(format_duration $PHASE2_DURATION)"
+log ""
 
-MAP_COUNT=$(find "$BASE_DIR/$OUTPUT_BASE/$TYPE" -name "*.map" 2>/dev/null | wc -l)
+MAP_COUNT=$(find "$BASE_DIR/$OUTPUT_BASE" -name "*.map" 2>/dev/null | wc -l)
 log "Maps created: $MAP_COUNT"
 
-[ "$MAP_COUNT" -gt 0 ] && log "Total size: $(du -sh "$BASE_DIR/$OUTPUT_BASE/$TYPE" 2>/dev/null | cut -f1)"
+if [ "$MAP_COUNT" -gt 0 ]; then
+    log "Output directory: $BASE_DIR/$OUTPUT_BASE/"
+    log "Total size: $(du -sh "$BASE_DIR/$OUTPUT_BASE" 2>/dev/null | cut -f1)"
+    log ""
+    log "Maps by type:"
+    for type in "${TYPES[@]}"; do
+        if [ -d "$BASE_DIR/$OUTPUT_BASE/$type" ]; then
+            type_count=$(find "$BASE_DIR/$OUTPUT_BASE/$type" -name "*.map" 2>/dev/null | wc -l)
+            type_size=$(du -sh "$BASE_DIR/$OUTPUT_BASE/$type" 2>/dev/null | cut -f1)
+            log "  - $type: $type_count maps ($type_size)"
+        fi
+    done
+fi
 
 log "════════════════════════════════════════════"
 

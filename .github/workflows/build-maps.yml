@@ -8,8 +8,6 @@ on:
 
   workflow_dispatch:
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build-container:
@@ -23,9 +21,11 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Login to GHCR
+
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
       - name: Build Container
+
         id: set-image
         run: |
           IMAGE=$(echo "ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')
@@ -37,6 +37,7 @@ jobs:
           echo "TAG=$TAG" >> $GITHUB_OUTPUT
 
       - name: Push Container
+
         run: |
           docker push ${{ steps.set-image.outputs.IMAGE }}:${{ steps.set-image.outputs.TAG }}
           if [ "${{ steps.set-image.outputs.TAG }}" = "main" ] || [ "${{ steps.set-image.outputs.TAG }}" = "master" ]; then
@@ -53,11 +54,11 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Install Python and dependencies
+      - name: Install Python
 
         run: |
           sudo apt update 
-          sudo apt install python3 python3-yaml python3-pip
+          sudo apt install -y python3 python3-yaml
       
       - name: Generate matrix
 
@@ -67,17 +68,14 @@ jobs:
           import yaml, json, os
           with open('countries.yml') as f: 
               countries = list(yaml.safe_load(f)['countries'].keys())
-          with open('map-types.conf') as f:
-              types = [line.split('=')[0].replace('MAP_TYPE_DESC_', '').replace('_', '-').lower() 
-                      for line in f if line.startswith('MAP_TYPE_DESC_')]
-          matrix = [{'country': c, 'type': t} for c in sorted(countries) for t in types]
+          matrix = [{'country': c} for c in sorted(countries)]
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
               f.write(f"matrix={json.dumps({'include': matrix})}\n")
-          print(f"Generated {len(matrix)} jobs: {len(countries)} countries × {len(types)} types")
+          print(f"Generated {len(matrix)} jobs for {len(countries)} countries (all types per job)")
           EOF
 
   build-maps:
-    name: ${{ matrix.country }} - ${{ matrix.type }}
+    name: ${{ matrix.country }}
     runs-on: ubuntu-latest
     needs: [build-container, generate-build-matrix]
     strategy:
@@ -89,17 +87,17 @@ jobs:
       image: ${{ needs.build-container.outputs.IMAGE }}:${{ needs.build-container.outputs.TAG }}
     
     steps:
-      - name: Build maps
+      - name: Build all map types for country
 
-        run: /work/easybuild.sh -c ${{ matrix.country }} -t ${{ matrix.type }} -j 2
+        run: /work/easybuild.sh -c ${{ matrix.country }} -j 2
 
-      - name: Upload artifact
+      - name: Upload artifacts
 
         uses: actions/upload-artifact@v6
         if: always()
         with:
-          name: ${{ matrix.type }}-${{ matrix.country }}
-          path: /work/output/${{ matrix.type }}/*.map
+          name: maps-${{ matrix.country }}
+          path: /work/output/*/*.map
           if-no-files-found: warn
 
   release:
@@ -107,31 +105,130 @@ jobs:
     runs-on: ubuntu-slim
     needs: build-maps
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: write
     
     steps:
+      - uses: actions/checkout@v6
+      
       - name: Download all artifacts
 
         uses: actions/download-artifact@v6
         with:
           pattern: maps-*
-          path: artifacts
+          path: artifacts-raw
+
+      - name: Organize by map type
+
+        run: |
+          mkdir -p release-files
+          
+          echo "Organizing artifacts by map type..."
+          
+          # Structure: artifacts-raw/maps-COUNTRY/TYPE/*.map 
+          # Target:     release-files/TYPE/*.map
+          
+          for country_dir in artifacts-raw/maps-*; do
+            if [ -d "$country_dir" ]; then
+              country=$(basename "$country_dir" | sed 's/^maps-//')
+              echo "Processing: $country"
+              
+              for type_dir in "$country_dir"/*; do
+                if [ -d "$type_dir" ]; then
+                  type_name=$(basename "$type_dir")
+                  mkdir -p "release-files/$type_name"
+                  
+                  # Copy all .map files
+                  map_count=$(find "$type_dir" -name "*.map" | wc -l)
+                  if [ $map_count -gt 0 ]; then
+                    echo "  - $type_name: $map_count maps"
+                    find "$type_dir" -name "*.map" -exec cp {} "release-files/$type_name/" \;
+                  fi
+                fi
+              done
+            fi
+          done
+          
+          # Generate summary dynamically
+          echo "## 🗺️ Map Files by Type" > summary.md
+          echo "" >> summary.md
+          echo "Download the archive for your preferred map type." >> summary.md
+          echo "Each archive contains maps for all available countries/regions." >> summary.md
+          echo "" >> summary.md
+          echo "### Available Map Types" >> summary.md
+          echo "" >> summary.md
+          
+          total_maps=0
+          total_size=0
+          
+          # Read type descriptions from map-types.conf
+          declare -A type_descriptions
+          while IFS='=' read -r key value; do
+            if [[ $key == MAP_TYPE_DESC_* ]]; then
+              type_key=$(echo "$key" | sed 's/MAP_TYPE_DESC_//' | tr '[:upper:]_' '[:lower:]-')
+              type_descriptions[$type_key]=$(echo "$value" | tr -d '"')
+            fi
+          done < map-types.conf
+          
+          for type_dir in release-files/*; do
+            if [ -d "$type_dir" ]; then
+              type_name=$(basename "$type_dir")
+              count=$(find "$type_dir" -name "*.map" | wc -l)
+              size=$(du -sh "$type_dir" | cut -f1)
+              size_bytes=$(du -sb "$type_dir" | cut -f1)
+              
+              total_maps=$((total_maps + count))
+              total_size=$((total_size + size_bytes))
+              
+              # Get description from map-types.conf or fallback
+              desc="${type_descriptions[$type_name]:-Unknown map type}"
+              
+              echo "#### 📦 \`${type_name}-maps.tar.gz\`" >> summary.md
+              echo "- **Description**: $desc" >> summary.md
+              echo "- **Maps**: $count files" >> summary.md
+              echo "- **Size**: $size" >> summary.md
+              echo "" >> summary.md
+            fi
+          done
+          
+          echo "---" >> summary.md
+          echo "" >> summary.md
+          echo "**Total**: $total_maps map files" >> summary.md
+          echo "" >> summary.md
+          echo "### 📥 Installation" >> summary.md
+          echo "" >> summary.md
+          echo "1. Download desired \`*-maps.tar.gz\` archive" >> summary.md
+          echo "2. Extract: \`tar -xzf MAPTYPE-maps.tar.gz\`" >> summary.md
+          echo "3. Backup existing maps on your iGPSport device" >> summary.md
+          echo "4. Copy \`.map\` files to device via USB" >> summary.md
+          echo "5. Restart device to load new maps" >> summary.md
+          
+          cat summary.md
+          
+          # Create type-specific archives dynamically
+          echo ""
+          echo "Creating archives..."
+          cd release-files
+          for type_dir in */; do
+            type_name=${type_dir%/}
+            echo "  → ${type_name}-maps.tar.gz"
+            tar -czf "../${type_name}-maps.tar.gz" "$type_dir"
+          done
+          cd ..
+          
+          echo ""
+          echo "Release preparation complete!"
+          ls -lh *-maps.tar.gz
 
       - name: Create Release
 
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
-          tag_name: maps-$(date +%Y%m%d)
-          name: Maps $(date +%Y-%m-%d)
-          body: |
-            Automated weekly map build from OpenStreetMap data.
-            
-            **Installation:**
-            1. Backup Map files from iGPSSport Device over USB (yes, USB Speed is only 500KB/s)
-            2. Remove old maps on device
-            3. Download desired type and countries
-            4. Extract .map files
-            5. Copy to BCS300 device
-
-          files: artifacts/*/*.map
+          tag_name: maps-${{ github.run_number }}-$(date +%Y%m%d-%H%M)
+          name: 🗺️ Maps $(date +%Y-%m-%d)
+          body_path: summary.md
+          files: |
+            *-maps.tar.gz
+          fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
