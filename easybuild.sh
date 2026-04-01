@@ -314,8 +314,6 @@ build_single() {
     
     cd "$BASE_DIR"
     rm -rf "$work_dir"
-    
-    info "════════════════════════════════════════════════════════════"
 }
 
 export -f build_single
