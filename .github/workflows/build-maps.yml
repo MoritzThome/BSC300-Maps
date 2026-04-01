@@ -4,9 +4,12 @@ on:
   push:
     branches: ["**"]
   schedule:
-    - cron: '0 2 1 * *'
+    - cron: '0 2 * * 0'  # Weekly on Sunday
+
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build-container:
@@ -43,51 +46,92 @@ jobs:
           docker images ${{ steps.set-image.outputs.IMAGE }}
 
 
+  generate-build-matrix:
+    runs-on: ubuntu-slim
+    outputs:
+      matrix: ${{ steps.generate.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Python and dependencies
+
+        run: |
+          sudo apt update 
+          sudo apt install python3 python3-yaml python3-pip
+      
+      - name: Generate matrix
+
+        id: generate
+        run: |
+          python3 << 'EOF'
+          import yaml, json, os
+          with open('countries.yml') as f: 
+              countries = list(yaml.safe_load(f)['countries'].keys())
+          with open('map-types.conf') as f:
+              types = [line.split('=')[0].replace('MAP_TYPE_DESC_', '').replace('_', '-').lower() 
+                      for line in f if line.startswith('MAP_TYPE_DESC_')]
+          matrix = [{'country': c, 'type': t} for c in sorted(countries) for t in types]
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f"matrix={json.dumps({'include': matrix})}\n")
+          print(f"Generated {len(matrix)} jobs: {len(countries)} countries × {len(types)} types")
+          EOF
+
   build-maps:
-    name: Build Maps (${{ matrix.type }})
+    name: ${{ matrix.country }} - ${{ matrix.type }}
     runs-on: ubuntu-latest
-    needs: build-container
+    needs: [build-container, generate-build-matrix]
     strategy:
-      matrix:
-        type: [streets-only, streets-names, water, green]
+      fail-fast: false
+      max-parallel: 10
+      matrix: ${{ fromJson(needs.generate-build-matrix.outputs.matrix) }}
+    
     container:
       image: ${{ needs.build-container.outputs.IMAGE }}:${{ needs.build-container.outputs.TAG }}
+    
     steps:
-      - name: Build map
-        run: /work/easybuild.sh -a -t ${{ matrix.type }} -j 2
+      - name: Build maps
+
+        run: /work/easybuild.sh -c ${{ matrix.country }} -t ${{ matrix.type }} -j 2
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+
+        uses: actions/upload-artifact@v6
+        if: always()
         with:
-          name: maps-${{ matrix.type }}
-          path: output/${{ matrix.type }}/*.map
-          retention-days: 90
+          name: ${{ matrix.type }}-${{ matrix.country }}
+          path: /work/output/${{ matrix.type }}/*.map
+          if-no-files-found: warn
 
   release:
     name: Create Release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     needs: build-maps
-    if: github.event_name == 'schedule'
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+
+        uses: actions/download-artifact@v6
         with:
-          path: downloaded
+          pattern: maps-*
+          path: artifacts
 
-      - name: Create release archives
-        run: |
-          mkdir -p release
-          for dir in downloaded/*; do
-            type=$(basename "$dir")
-            zip -r "release/${type}-$(date +%Y%m%d).zip" "$dir"
-          done
+      - name: Create Release
 
-      - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: maps-$(date +%Y%m%d)
-          name: Maps Build $(date +%Y-%m-%d)
-          body: "Automated map build release"
-          files: release/*.zip
+          name: Maps $(date +%Y-%m-%d)
+          body: |
+            Automated weekly map build from OpenStreetMap data.
+            
+            **Installation:**
+            1. Backup Map files from iGPSSport Device over USB (yes, USB Speed is only 500KB/s)
+            2. Remove old maps on device
+            3. Download desired type and countries
+            4. Extract .map files
+            5. Copy to BCS300 device
+
+          files: artifacts/*/*.map
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
