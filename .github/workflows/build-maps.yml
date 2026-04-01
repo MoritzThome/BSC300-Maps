@@ -54,7 +54,7 @@ jobs:
       image: ${{ needs.build-container.outputs.IMAGE }}:${{ needs.build-container.outputs.TAG }}
     steps:
       - name: Build map
-        run: /work/easybuild.sh -a -t ${{ matrix.type }} -j 2
+        run: /work/easybuild.sh -a -t ${{ matrix.type }} -j 4
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
