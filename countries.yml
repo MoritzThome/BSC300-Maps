@@ -77,76 +77,63 @@ countries:
 
         url: https://download.geofabrik.de/europe/france/auvergne-latest.osm.pbf
         state: "13"
-      # Weitere französische Regionen...
     
-  germany:
-    code: DE
-    regions:
-      - name: baden-wuerttemberg
+germany-west:
+  code: DE
+  regions:
+    - name: baden-wuerttemberg
+      url: https://download.geofabrik.de/europe/germany/baden-wuerttemberg-latest.osm.pbf
+      state: "01"
+    - name: bayern
+      url: https://download.geofabrik.de/europe/germany/bayern-latest.osm.pbf
+      state: "02"
+    - name: bremen
+      url: https://download.geofabrik.de/europe/germany/bremen-latest.osm.pbf
+      state: "05"
+    - name: hamburg
+      url: https://download.geofabrik.de/europe/germany/hamburg-latest.osm.pbf
+      state: "06"
+    - name: hessen
+      url: https://download.geofabrik.de/europe/germany/hessen-latest.osm.pbf
+      state: "07"
+    - name: niedersachsen
+      url: https://download.geofabrik.de/europe/germany/niedersachsen-latest.osm.pbf
+      state: "09"
+    - name: nordrhein-westfalen
+      url: https://download.geofabrik.de/europe/germany/nordrhein-westfalen-latest.osm.pbf
+      state: "10"
+    - name: rheinland-pfalz
+      url: https://download.geofabrik.de/europe/germany/rheinland-pfalz-latest.osm.pbf
+      state: "11"
+    - name: saarland
+      url: https://download.geofabrik.de/europe/germany/saarland-latest.osm.pbf
+      state: "12"
+    - name: schleswig-holstein
+      url: https://download.geofabrik.de/europe/germany/schleswig-holstein-latest.osm.pbf
+      state: "15"
 
-        url: https://download.geofabrik.de/europe/germany/baden-wuerttemberg-latest.osm.pbf
-        state: "01"
-      - name: bayern
+germany-east:
+  code: DE
+  regions:
+    - name: berlin
+      url: https://download.geofabrik.de/europe/germany/berlin-latest.osm.pbf
+      state: "03"
+    - name: brandenburg
+      url: https://download.geofabrik.de/europe/germany/brandenburg-latest.osm.pbf
+      state: "04"
+    - name: mecklenburg-vorpommern
+      url: https://download.geofabrik.de/europe/germany/mecklenburg-vorpommern-latest.osm.pbf
+      state: "08"
+    - name: sachsen
+      url: https://download.geofabrik.de/europe/germany/sachsen-latest.osm.pbf
+      state: "13"
+    - name: sachsen-anhalt
+      url: https://download.geofabrik.de/europe/germany/sachsen-anhalt-latest.osm.pbf
+      state: "14"
+    - name: thueringen
+      url: https://download.geofabrik.de/europe/germany/thueringen-latest.osm.pbf
+      state: "16"
 
-        url: https://download.geofabrik.de/europe/germany/bayern-latest.osm.pbf
-        state: "02"
-      - name: berlin
-
-        url: https://download.geofabrik.de/europe/germany/berlin-latest.osm.pbf
-        state: "03"
-      - name: brandenburg
-
-        url: https://download.geofabrik.de/europe/germany/brandenburg-latest.osm.pbf
-        state: "04"
-      - name: bremen
-
-        url: https://download.geofabrik.de/europe/germany/bremen-latest.osm.pbf
-        state: "05"
-      - name: hamburg
-
-        url: https://download.geofabrik.de/europe/germany/hamburg-latest.osm.pbf
-        state: "06"
-      - name: hessen
-
-        url: https://download.geofabrik.de/europe/germany/hessen-latest.osm.pbf
-        state: "07"
-      - name: mecklenburg-vorpommern
-
-        url: https://download.geofabrik.de/europe/germany/mecklenburg-vorpommern-latest.osm.pbf
-        state: "08"
-      - name: niedersachsen
-
-        url: https://download.geofabrik.de/europe/germany/niedersachsen-latest.osm.pbf
-        state: "09"
-      - name: nordrhein-westfalen
-
-        url: https://download.geofabrik.de/europe/germany/nordrhein-westfalen-latest.osm.pbf
-        state: "10"
-      - name: rheinland-pfalz
-
-        url: https://download.geofabrik.de/europe/germany/rheinland-pfalz-latest.osm.pbf
-        state: "11"
-      - name: saarland
-
-        url: https://download.geofabrik.de/europe/germany/saarland-latest.osm.pbf
-        state: "12"
-      - name: sachsen
-
-        url: https://download.geofabrik.de/europe/germany/sachsen-latest.osm.pbf
-        state: "13"
-      - name: sachsen-anhalt
-
-        url: https://download.geofabrik.de/europe/germany/sachsen-anhalt-latest.osm.pbf
-        state: "14"
-      - name: schleswig-holstein
-
-        url: https://download.geofabrik.de/europe/germany/schleswig-holstein-latest.osm.pbf
-        state: "15"
-      - name: thueringen
-
-        url: https://download.geofabrik.de/europe/germany/thueringen-latest.osm.pbf
-        state: "16"
-    
   greece:
     code: GR
     url: https://download.geofabrik.de/europe/greece-latest.osm.pbf
