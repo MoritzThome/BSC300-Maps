@@ -76,15 +76,25 @@ jobs:
 
         id: generate
         run: |
-          python3 << 'EOF'
-          import yaml, json, os
-          with open('countries.yml') as f: 
-              countries = list(yaml.safe_load(f)['countries'].keys())
-          matrix = [{'country': c} for c in sorted(countries)]
-          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
-              f.write(f"matrix={json.dumps({'include': matrix})}\n")
-          print(f"Generated {len(matrix)} jobs for {len(countries)} countries (all types per job)")
-          EOF
+            python3 << 'EOF'
+            import yaml, json, os
+
+            with open('countries.yml') as f:
+                data = yaml.safe_load(f)['countries']
+
+            items = [
+                f"{c}/{r['name']}" if 'regions' in v else c
+                for c, v in data.items()
+                for r in (v.get('regions') or [{}])
+            ]
+
+            matrix = [{'country': x} for x in sorted(items)]
+
+            with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+                f.write(f"matrix={json.dumps({'include': matrix})}\n")
+
+            print(f"Generated {len(matrix)} jobs")
+            EOF
 
   build-maps:
     name: ${{ matrix.country }}
