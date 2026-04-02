@@ -101,7 +101,7 @@ jobs:
     steps:
       - name: Build all map types for country
 
-        run: /work/easybuild.sh -c ${{ matrix.country }} -j 2
+        run: /work/easybuild.sh -c ${{ matrix.country }} -j 1
 
       - name: Upload artifacts
 
