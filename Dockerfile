@@ -1,4 +1,4 @@
-FROM debian:trixie-slim
+FROM ubuntu:24.04
 
 LABEL description="Container for building BCS300/iGPSport map files from OpenStreetMap data"
 
