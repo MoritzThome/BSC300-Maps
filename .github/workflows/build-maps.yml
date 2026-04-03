@@ -73,36 +73,70 @@ jobs:
           sudo apt install -y python3 python3-yaml
       
       - name: Generate matrix
-
         id: generate
         run: |
-            python3 << 'EOF'
-            import yaml, json, os
-
-            with open('countries.yml') as f:
-                data = yaml.safe_load(f)['countries']
-
-            items = [
-                f"{c}/{r['name']}" if 'regions' in v else c
-                for c, v in data.items()
-                for r in (v.get('regions') or [{}])
-            ]
-
-            matrix = [{'country': x} for x in sorted(items)]
-
-            with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
-                f.write(f"matrix={json.dumps({'include': matrix})}\n")
-
-            print(f"Generated {len(matrix)} jobs")
-            EOF
+          python3 << 'EOF'
+          # large countries, single ci job for each type
+          large_countries = ['finland', 'norway', 'sweden', 'poland'
+          ]
+          import yaml, json, os
+          
+          with open('countries.yml') as f:
+              data = yaml.safe_load(f)
+          
+          with open('map-types.conf') as f:
+              types = [line.split('=')[0].replace('MAP_TYPE_DESC_', '').replace('_', '-').lower() 
+                      for line in f if line.startswith('MAP_TYPE_DESC_')]
+          
+          matrix = []
+          
+          for country, config in sorted(data['countries'].items()):
+              code = config['code']
+              
+              if 'regions' in config:
+                for region in config['regions']:
+                    matrix.append({
+                        'country': country,
+                        'region': region['name'],
+                        'display': f"{country}/{region['name']}",
+                        'code': code,
+                        'state': region['state'],
+                        'types': ''
+                    })
+              else:
+                  if country in large_countries:
+                      for map_type in types:
+                          matrix.append({
+                              'country': country,
+                              'region': country,
+                              'display': f"{country} ({map_type})",
+                              'code': code,
+                              'state': config.get('state', '00'),
+                              'types': map_type
+                          })
+                  else:
+                      matrix.append({
+                          'country': country,
+                          'region': country,
+                          'display': country,
+                          'code': code,
+                          'state': config.get('state', '00'),
+                          'types': ''
+                      })
+          
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f"matrix={json.dumps({'include': matrix})}\n")
+          
+          print(f"Generated {len(matrix)} jobs")
+          EOF
 
   build-maps:
-    name: ${{ matrix.country }}
+    name: ${{ matrix.display }}
     runs-on: ubuntu-latest
     needs: [build-container, generate-build-matrix]
     strategy:
       fail-fast: false
-      max-parallel: 10
+      max-parallel: 15
       matrix: ${{ fromJson(needs.generate-build-matrix.outputs.matrix) }}
     
     container:
@@ -111,14 +145,25 @@ jobs:
     steps:
       - name: Build all map types for country
 
-        run: /work/easybuild.sh -c ${{ matrix.country }} -j 1
+        run: |
+          if [ "${{ matrix.region }}" != "${{ matrix.country }}" ]; then
+            TARGET="${{ matrix.country }}/${{ matrix.region }}"
+          else
+            TARGET="${{ matrix.country }}"
+          fi
+          
+          if [ -z "${{ matrix.types }}" ]; then
+            /work/easybuild.sh -c "$TARGET" -j 2
+          else
+            /work/easybuild.sh -c "$TARGET" -t ${{ matrix.types }} -j 2
+          fi
 
       - name: Upload artifacts
 
         uses: actions/upload-artifact@v6
         if: always()
         with:
-          name: maps-${{ matrix.country }}
+          name: maps-${{ matrix.country }}-${{ matrix.region }}-${{ matrix.types || 'all' }}
           path: /work/output/*/*.map
           if-no-files-found: warn
 

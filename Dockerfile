@@ -30,8 +30,6 @@ RUN apt update -qq && apt install -qqy --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* \
     && rm -rf /tmp/*
 
-ENV JAVA_TOOL_OPTIONS="-Xmx14g"
-
 WORKDIR /work
 
 COPY . /work/
