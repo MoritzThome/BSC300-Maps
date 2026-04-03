@@ -357,7 +357,7 @@ countries:
         state: "10"
       - name: islas-baleares
 
-        url: https://download.geofabrik.de/europe/spain/baleares-latest.osm.pbf
+        url: https://download.geofabrik.de/europe/spain/islas-baleares-latest.osm.pbf
         state: "11"
       - name: la-rioja
 
