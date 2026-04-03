@@ -177,14 +177,60 @@ fi
 parse_countries() {
     python3 - "$CONFIG_FILE" "$COUNTRIES" << 'PYEOF'
 import sys, yaml
-with open(sys.argv[1]) as f: data = yaml.safe_load(f)
-countries = data['countries'].keys() if sys.argv[2] == "all" else [c.strip() for c in sys.argv[2].split(',')]
-for c in countries:
-    if c not in data['countries']: continue
-    d = data['countries'][c]
-    if 'regions' in d:
-        for r in d['regions']: print(f"{c}\t{r['name']}\t{r['url']}\t{r['state']}\t{d['code']}")
-    else: print(f"{c}\t{c}\t{d['url']}\t{d.get('state','00')}\t{d['code']}")
+
+with open(sys.argv[1]) as f: 
+    data = yaml.safe_load(f)
+
+if sys.argv[2] == "all":
+    countries_to_build = list(data['countries'].keys())
+else:
+    countries_to_build = [c.strip() for c in sys.argv[2].split(',')]
+
+for country_spec in countries_to_build:
+    # Check if specific region requested: "germany/bayern"
+    if '/' in country_spec:
+        country, requested_region = country_spec.split('/', 1)
+        country = country.strip()
+        requested_region = requested_region.strip()
+        
+        if country not in data['countries']:
+            print(f"ERROR: Country '{country}' not found", file=sys.stderr)
+            continue
+        
+        d = data['countries'][country]
+        
+        if 'regions' not in d:
+            print(f"ERROR: Country '{country}' has no regions", file=sys.stderr)
+            continue
+        
+        # Find the specific region
+        found = False
+        for r in d['regions']:
+            if r['name'] == requested_region:
+                print(f"{country}\t{r['name']}\t{r['url']}\t{r['state']}\t{d['code']}")
+                found = True
+                break
+        
+        if not found:
+            print(f"ERROR: Region '{requested_region}' not found in '{country}'", file=sys.stderr)
+    
+    else:
+        # Normal country (all regions or single file)
+        country = country_spec.strip()
+        
+        if country not in data['countries']:
+            print(f"ERROR: Country '{country}' not found", file=sys.stderr)
+            continue
+        
+        d = data['countries'][country]
+        
+        if 'regions' in d:
+            # Country with regions - output all
+            for r in d['regions']:
+                print(f"{country}\t{r['name']}\t{r['url']}\t{r['state']}\t{d['code']}")
+        else:
+            # Single-file country
+            print(f"{country}\t{country}\t{d['url']}\t{d.get('state','00')}\t{d['code']}")
 PYEOF
 }
 
