@@ -16,7 +16,7 @@ RUN apt update -qq && apt install -qqy --no-install-recommends \
     make \
     zlib1g-dev \
     # Java (needed for Osmosis/Mapsforge)
-    default-jre-headless \
+    default-jre \
     # Python
     python3 \
     python3-numpy \
