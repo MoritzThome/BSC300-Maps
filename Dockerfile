@@ -1,4 +1,4 @@
-FROM ubuntu:24.04
+FROM debian:forky
 
 LABEL description="Container for building BCS300/iGPSport map files from OpenStreetMap data"
 
@@ -16,7 +16,7 @@ RUN apt update -qq && apt install -qqy --no-install-recommends \
     make \
     zlib1g-dev \
     # Java (needed for Osmosis/Mapsforge)
-    default-jre \
+    default-jre-headless \
     # Python
     python3 \
     python3-numpy \
