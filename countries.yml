@@ -404,13 +404,13 @@ countries:
     regions:
       - name: england
 
-        url: https://download.geofabrik.de/europe/great-britain/england-latest.osm.pbf
+        url: https://download.geofabrik.de/europe/united-kingdom/england-latest.osm.pbf
         state: "01"
       - name: scotland
 
-        url: https://download.geofabrik.de/europe/great-britain/scotland-latest.osm.pbf
+        url: https://download.geofabrik.de/europe/united-kingdom/scotland-latest.osm.pbf
         state: "02"
       - name: wales
 
-        url: https://download.geofabrik.de/europe/great-britain/wales-latest.osm.pbf
+        url: https://download.geofabrik.de/europe/united-kingdom/wales-latest.osm.pbf
         state: "03"
