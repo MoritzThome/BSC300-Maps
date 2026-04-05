@@ -151,11 +151,11 @@ jobs:
           else
             TARGET="${{ matrix.country }}"
           fi
-          
+
           if [ -z "${{ matrix.types }}" ]; then
-            /work/easybuild.sh -c "$TARGET" -j 2
+            /work/easybuild.sh -c "$TARGET" -j 1
           else
-            /work/easybuild.sh -c "$TARGET" -t ${{ matrix.types }} -j 2
+            /work/easybuild.sh -c "$TARGET" -t ${{ matrix.types }} -j 1
           fi
 
       - name: Upload artifacts

@@ -29,7 +29,7 @@ tag_file = "tag-igpsport.xml"
 
 cmd = (
     "./osmosis --rbf file={input_map_file} workers=1 --buffer bufferCapacity=1000 "
-    "--mapfile-writer file={output_map_file} type=ram zoom-interval-conf=13,13,13,14,14,14 threads=4 simplification-factor=0 simplification-max-zoom=20 tag-conf-file={tag_file} "
+    "--mapfile-writer file={output_map_file} type=ram zoom-interval-conf=13,13,13,14,14,14 threads=1 simplification-factor=0 simplification-max-zoom=20 tag-conf-file={tag_file} "
 )
 
 if not os.path.isdir(bin_dir):
@@ -68,7 +68,7 @@ bin_dir = os.path.realpath(bin_dir)
 temp_dir = str(int(datetime.today().timestamp()*1000)) + "_tmp"
 Path(temp_dir).mkdir(parents=True, exist_ok=True)
 os.environ["JAVA_TOOL_OPTIONS"] = "-Djava.io.tmpdir=" + os.path.realpath(temp_dir)
-os.environ["_JAVA_OPTIONS"] = "-Xmx8g -XX:+UseStringDeduplication"
+os.environ["_JAVA_OPTIONS"] = "-Xmx15g -XX:+UseStringDeduplication"
 
 # run
 cmd = cmd.format(
