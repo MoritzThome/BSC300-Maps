@@ -145,12 +145,9 @@ jobs:
     steps:
       - name: Setup compressed RAM disk
         run: |
-            modprobe zram
-            echo zstd | tee /sys/block/zram0/comp_algorithm
-            echo $((8 * 1024 * 1024 * 1024)) | tee /sys/block/zram0/disksize
-            mkfs.ext2 /dev/zram0
-            mkdir -p /mnt/zram
-            mount -o noatime /dev/zram0 /mnt/zram
+            mkdir -p /mnt/ramdisk
+            mount -t tmpfs -o size=8G,tmpfs,nodev,nosuid,noexec,mode=1777 tmpfs /mnt/ramdisk
+            df -h
 
       - name: Build all map types for country
 

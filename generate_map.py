@@ -65,7 +65,7 @@ tmp_map_file = os.path.realpath(str(int(datetime.today().timestamp()*1000)) + "t
 bin_dir = os.path.realpath(bin_dir)
 
 # make sure tmp is in ram
-temp_dir = "/mnt/zram/"+str(int(datetime.today().timestamp()*1000)) + "_tmp"
+temp_dir = "/mnt/ramdisk/"+str(int(datetime.today().timestamp()*1000)) + "_tmp"
 Path(temp_dir).mkdir(parents=True, exist_ok=True)
 os.environ["JAVA_TOOL_OPTIONS"] = "-Djava.io.tmpdir=" + os.path.realpath(temp_dir)
 os.environ["_JAVA_OPTIONS"] = (
