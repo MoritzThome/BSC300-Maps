@@ -153,9 +153,9 @@ jobs:
           fi
 
           if [ -z "${{ matrix.types }}" ]; then
-            /work/easybuild.sh -c "$TARGET" -j 1
+            /work/easybuild.sh -c "$TARGET" -j 1 -v
           else
-            /work/easybuild.sh -c "$TARGET" -t ${{ matrix.types }}
+            /work/easybuild.sh -c "$TARGET" -t ${{ matrix.types }} -j 1 -v
           fi
 
       - name: Upload artifacts
