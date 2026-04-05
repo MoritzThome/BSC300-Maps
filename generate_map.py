@@ -69,7 +69,7 @@ temp_dir = str(int(datetime.today().timestamp()*1000)) + "_tmp"
 Path(temp_dir).mkdir(parents=True, exist_ok=True)
 os.environ["JAVA_TOOL_OPTIONS"] = "-Djava.io.tmpdir=" + os.path.realpath(temp_dir)
 os.environ["_JAVA_OPTIONS"] = (
-    "-Xmx14g -Xms4g -XX:+UseG1GC -XX:MaxGCPauseMillis=1000 -XX:G1HeapRegionSize=32m -XX:+UseStringDeduplication -XX:InitiatingHeapOccupancyPercent=35 "
+    "-Xmx15g -Xms8g -XX:+UseParallelGC -XX:ParallelGCThreads=4 -XX:MaxGCPauseMillis=500 "
 )
 
 # run
