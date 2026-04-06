@@ -12,6 +12,8 @@ on:
 jobs:
   test-norway-green:
     runs-on: ubuntu-latest
+    env:
+      _JAVA_OPTIONS: " -Xmx24g "
     steps:
       - uses: actions/checkout@v6
 
@@ -26,7 +28,7 @@ jobs:
       - name: Set Swap Space
         uses: pierotofy/set-swap-space@master
         with:
-          swap-size-gb: 30
+          swap-size-gb: 16
 
       - name: omsis
         if: steps.cache.outputs.cache-hit != 'true'

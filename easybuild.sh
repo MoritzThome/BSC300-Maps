@@ -43,6 +43,7 @@ PARALLEL_JOBS=2
 COUNTRIES=""
 OUTPUT_BASE="output"
 CONFIG_FILE="$BASE_DIR/countries.yml"
+export _JAVA_OPTIONS="${_JAVA_OPTIONS:' -Xmx8g '}"
 
 usage() {
     cat << 'EOF'
