@@ -28,7 +28,7 @@ tag_file = "tag-igpsport.xml"
 
 
 cmd = (
-    "./osmosis --rbf file={input_map_file} --buffer "
+    "./osmosis --rbf file={input_map_file} "
     "--mapfile-writer file={output_map_file} type=hd zoom-interval-conf=13,13,13,14,14,14 threads=1 simplification-factor=0 simplification-max-zoom=20 tag-conf-file={tag_file} "
 )
 
@@ -64,12 +64,11 @@ tag_file = os.path.realpath(tag_file)
 tmp_map_file = os.path.realpath(str(int(datetime.today().timestamp()*1000)) + "tmp.map")
 bin_dir = os.path.realpath(bin_dir)
 
-# make sure tmp is in ram
-temp_dir = "/mnt/ramdisk/"+str(int(datetime.today().timestamp()*1000)) + "_tmp"
+temp_dir = str(int(datetime.today().timestamp()*1000)) + "_tmp"
 Path(temp_dir).mkdir(parents=True, exist_ok=True)
 os.environ["JAVA_TOOL_OPTIONS"] = "-Djava.io.tmpdir=" + os.path.realpath(temp_dir)
 os.environ["_JAVA_OPTIONS"] = (
-    "-Xmx8g "
+    "-Xmx4g "
 )
 
 # run
