@@ -22,13 +22,11 @@ jobs:
           pip install numpy
           echo "freeing ~10gb of disk space"
           sudo rm -rf /usr/local/lib/android || true
-          
-      - name: setup ramdisk
-        run: |
-            sudo mkdir -p /mnt/ram
-            sudo mount -t tmpfs -o size=12G tmpfs /mnt/ram
-            mv $GITHUB_WORKSPACE /mnt/ram/repo
-            ln -s /mnt/ram/repo $GITHUB_WORKSPACE
+
+      - name: Set Swap Space
+        uses: pierotofy/set-swap-space@master
+        with:
+          swap-size-gb: 30
 
       - name: omsis
         if: steps.cache.outputs.cache-hit != 'true'
