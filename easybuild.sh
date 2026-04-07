@@ -43,7 +43,16 @@ PARALLEL_JOBS=2
 COUNTRIES=""
 OUTPUT_BASE="output"
 CONFIG_FILE="$BASE_DIR/countries.yml"
-export _JAVA_OPTIONS="${_JAVA_OPTIONS:' -Xmx8g '}"
+DEFAULT_MEMORY="8g"
+
+
+if [ -z "${_JAVA_OPTIONS+x}" ]; then
+    export _JAVA_OPTIONS="-Xmx${DEFAULT_MEMORY}"
+    AUTO_JAVA_MEM=true
+else
+    AUTO_JAVA_MEM=false
+    debug "Using external _JAVA_OPTIONS: $_JAVA_OPTIONS"
+fi
 
 usage() {
     cat << 'EOF'
@@ -176,11 +185,13 @@ if [ "$PREPARE_ONLY" = true ]; then
 fi
 
 parse_countries() {
-    python3 - "$CONFIG_FILE" "$COUNTRIES" << 'PYEOF'
+    python3 - "$CONFIG_FILE" "$COUNTRIES" "$DEFAULT_MEMORY" << 'PYEOF'
 import sys, yaml
 
 with open(sys.argv[1]) as f: 
     data = yaml.safe_load(f)
+
+default_memory = sys.argv[3]
 
 if sys.argv[2] == "all":
     countries_to_build = list(data['countries'].keys())
@@ -199,6 +210,7 @@ for country_spec in countries_to_build:
             continue
         
         d = data['countries'][country]
+        memory = d.get('memory', default_memory)
         
         if 'regions' not in d:
             print(f"ERROR: Country '{country}' has no regions", file=sys.stderr)
@@ -208,7 +220,7 @@ for country_spec in countries_to_build:
         found = False
         for r in d['regions']:
             if r['name'] == requested_region:
-                print(f"{country}\t{r['name']}\t{r['url']}\t{r['state']}\t{d['code']}")
+                print(f"{country}\t{r['name']}\t{r['url']}\t{r['state']}\t{d['code']}\t{memory}")
                 found = True
                 break
         
@@ -224,14 +236,15 @@ for country_spec in countries_to_build:
             continue
         
         d = data['countries'][country]
+        memory = d.get('memory', default_memory)
         
         if 'regions' in d:
             # Country with regions - output all
             for r in d['regions']:
-                print(f"{country}\t{r['name']}\t{r['url']}\t{r['state']}\t{d['code']}")
+                print(f"{country}\t{r['name']}\t{r['url']}\t{r['state']}\t{d['code']}\t{memory}")
         else:
             # Single-file country
-            print(f"{country}\t{country}\t{d['url']}\t{d.get('state','00')}\t{d['code']}")
+            print(f"{country}\t{country}\t{d['url']}\t{d.get('state','00')}\t{d['code']}\t{memory}")
 PYEOF
 }
 
@@ -332,12 +345,12 @@ build_type_with_progress() {
 export -f build_type_with_progress
 
 # Phase 2: Build one type for one region
-
 build_type() {
     local task_file="$1"
     
-    # Read task info
-    IFS=$'\t' read -r region_work type code state country region < "$task_file"
+    # Read task info inkl. memory
+    IFS=$'\t' read -r region_work type code state country region memory < "$task_file"
+    memory="${memory:-$DEFAULT_MEMORY}"  # Fallback
     
     # Check phase 1 success
     if [ ! -f "$region_work/status.txt" ] || [ "$(cat "$region_work/status.txt")" != "OK" ]; then
@@ -397,10 +410,19 @@ build_type() {
         return 1
     fi
     
-    if [ "$VERBOSE" = true ]; then
-        python3 "$BASE_DIR/generate_map.py" -i "$abs_input" -c "$code" -s "$state" -t "$abs_tag_file"
+    # Use memory from config or external override
+    local java_opts
+    if [ "$AUTO_JAVA_MEM" = true ]; then
+        java_opts="-Xmx${memory}"
+        debug "Using memory from config for $country: $java_opts"
     else
-        python3 "$BASE_DIR/generate_map.py" -i "$abs_input" -c "$code" -s "$state" -t "$abs_tag_file" >/dev/null 2>&1
+        java_opts="$_JAVA_OPTIONS"
+    fi
+    
+    if [ "$VERBOSE" = true ]; then
+        _JAVA_OPTIONS="$java_opts" python3 "$BASE_DIR/generate_map.py" -i "$abs_input" -c "$code" -s "$state" -t "$abs_tag_file"
+    else
+        _JAVA_OPTIONS="$java_opts" python3 "$BASE_DIR/generate_map.py" -i "$abs_input" -c "$code" -s "$state" -t "$abs_tag_file" >/dev/null 2>&1
     fi
     
     # Move maps
@@ -469,10 +491,10 @@ PHASE1_DIR="$WORK_DIR/phase1-tasks"
 mkdir -p "$PHASE1_DIR"
 
 REGION_COUNT=0
-while IFS=$'\t' read -r country region url state code; do
+while IFS=$'\t' read -r country region url state code memory; do
     [ -z "$country" ] && continue
     REGION_COUNT=$((REGION_COUNT + 1))
-    printf "%s\t%s\t%s\t%s\t%s\n" "$country" "$region" "$url" "$state" "$code" > "$PHASE1_DIR/region_${REGION_COUNT}.txt"
+    printf "%s\t%s\t%s\t%s\t%s\t%s\n" "$country" "$region" "$url" "$state" "$code" "${memory:-$DEFAULT_MEMORY}" > "$PHASE1_DIR/region_${REGION_COUNT}.txt"
 done < "$ALL_REGIONS"
 
 rm "$ALL_REGIONS"
@@ -542,14 +564,14 @@ mkdir -p "$PHASE2_DIR"
 
 TASK_COUNT=0
 for task_file in "$PHASE1_DIR"/region_*.txt; do
-    IFS=$'\t' read -r country region url state code < "$task_file"
+    IFS=$'\t' read -r country region url state code memory < "$task_file"
     region_work="$WORK_DIR/${country}-${region}"
     
     # Only for successful phase 1
     if [ -f "$region_work/status.txt" ] && [ "$(cat "$region_work/status.txt")" = "OK" ]; then
         for type in "${TYPES[@]}"; do
             TASK_COUNT=$((TASK_COUNT + 1))
-            printf "%s\t%s\t%s\t%s\t%s\t%s\n" "$region_work" "$type" "$code" "$state" "$country" "$region" > "$PHASE2_DIR/task_${TASK_COUNT}.txt"
+            printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\n" "$region_work" "$type" "$code" "$state" "$country" "$region" "${memory:-$DEFAULT_MEMORY}" > "$PHASE2_DIR/task_${TASK_COUNT}.txt"
         done
     fi
 done

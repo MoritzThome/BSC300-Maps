@@ -13,7 +13,7 @@ jobs:
   test-norway-green:
     runs-on: ubuntu-latest
     env:
-      _JAVA_OPTIONS: " -Xmx24g "
+      _JAVA_OPTIONS: " -Xmx36g "
     steps:
       - uses: actions/checkout@v6
 
@@ -104,11 +104,6 @@ jobs:
         run: |
           python3 generate_map.py -i tmp_filtered.pbf -c NO -s 00 -t tags_with_green_stuff.xml
 
-      - name: "Upload Artifact"
-        uses: actions/upload-artifact@v4
-        with:
-          path: /mnt/ram/repo/*.map
-
   build-container:
     runs-on: ubuntu-latest
     permissions:
@@ -174,60 +169,48 @@ jobs:
       - name: Generate matrix
         id: generate
         run: |
-          python3 << 'EOF'
-          # large countries, single ci job for each type
-          large_countries = ['finland', 'norway', 'sweden', 'poland'
-          ]
-          import yaml, json, os
-          
-          with open('countries.yml') as f:
-              data = yaml.safe_load(f)
-          
-          with open('map-types.conf') as f:
-              types = [line.split('=')[0].replace('MAP_TYPE_DESC_', '').replace('_', '-').lower() 
-                      for line in f if line.startswith('MAP_TYPE_DESC_')]
-          
-          matrix = []
-          
-          for country, config in sorted(data['countries'].items()):
-              code = config['code']
-              
-              if 'regions' in config:
-                for region in config['regions']:
+            python3 << 'EOF'
+            import yaml, json, os
+            
+            with open('countries.yml') as f:
+                data = yaml.safe_load(f)
+            
+            with open('map-types.conf') as f:
+                types = [line.split('=')[0].replace('MAP_TYPE_DESC_', '').replace('_', '-').lower() 
+                        for line in f if line.startswith('MAP_TYPE_DESC_')]
+            
+            all_types = ','.join(types)
+            matrix = []
+            
+            for country, config in sorted(data['countries'].items()):
+                code = config['code']
+                state = config.get('state', '00')
+                
+                if 'memory' in config:
+                    # Large country: one job per type
+                    for map_type in types:
+                        matrix.append({
+                            'country': country,
+                            'display': f"{country} ({map_type})",
+                            'code': code,
+                            'state': state,
+                            'types': map_type
+                        })
+                else:
+                    # Normal country: all types together
                     matrix.append({
                         'country': country,
-                        'region': region['name'],
-                        'display': f"{country}/{region['name']}",
+                        'display': country,
                         'code': code,
-                        'state': region['state'],
-                        'types': ''
+                        'state': state,
+                        'types': all_types
                     })
-              else:
-                  if country in large_countries:
-                      for map_type in types:
-                          matrix.append({
-                              'country': country,
-                              'region': country,
-                              'display': f"{country} ({map_type})",
-                              'code': code,
-                              'state': config.get('state', '00'),
-                              'types': map_type
-                          })
-                  else:
-                      matrix.append({
-                          'country': country,
-                          'region': country,
-                          'display': country,
-                          'code': code,
-                          'state': config.get('state', '00'),
-                          'types': ''
-                      })
-          
-          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
-              f.write(f"matrix={json.dumps({'include': matrix})}\n")
-          
-          print(f"Generated {len(matrix)} jobs")
-          EOF
+            
+            with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+                f.write(f"matrix={json.dumps({'include': matrix})}\n")
+            
+            print(f"Generated {len(matrix)} jobs")
+            EOF
 
   build-maps:
     name: ${{ matrix.display }}
@@ -238,25 +221,19 @@ jobs:
       max-parallel: 15
       matrix: ${{ fromJson(needs.generate-build-matrix.outputs.matrix) }}
     
-    container:
-      image: ${{ needs.build-container.outputs.IMAGE_DIGEST }}
-    
     steps:
+      - name: Set Swap Space for very large countries
+        uses: pierotofy/set-swap-space@master
+        with:
+          swap-size-gb: 16
+
+    
+
       - name: Build all map types for country
 
         run: |
-          if [ "${{ matrix.region }}" != "${{ matrix.country }}" ]; then
-            TARGET="${{ matrix.country }}/${{ matrix.region }}"
-          else
-            TARGET="${{ matrix.country }}"
-          fi
-
-          if [ -z "${{ matrix.types }}" ]; then
-            /work/easybuild.sh -c "$TARGET" -j 1 -v
-          else
-            /work/easybuild.sh -c "$TARGET" -t ${{ matrix.types }} -j 1 -v
-          fi
-
+            docker run -v /work/output/:/work/output/ ${{ needs.build-container.outputs.IMAGE_DIGEST }} -c ${{ matrix.country }} -t ${{ matrix.types }} -j 2 -v
+          
       - name: Upload artifacts
 
         uses: actions/upload-artifact@v6
