@@ -448,7 +448,7 @@ build_type() {
 
 export -f download_and_convert build_type format_duration log info warn error debug
 export -f get_filter_cmd get_modify_cmd get_tag_file get_description is_valid_map_type
-export VERBOSE BASE_DIR OUTPUT_BASE
+export VERBOSE BASE_DIR OUTPUT_BASE AUTO_JAVA_MEM DEFAULT_MEMORY CONFIG_FILE
 
 # ═══════════════════════════════════════════════════════════
 

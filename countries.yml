@@ -285,15 +285,15 @@ countries:
     url: https://download.geofabrik.de/europe/macedonia-latest.osm.pbf
     state: "00"
   norway:
-    code: "NO"
+    code: NO
     url: https://download.geofabrik.de/europe/norway-latest.osm.pbf
     state: "00"
-    memory: 32g
+    memory: "32g"
   poland:
     code: PL
     url: https://download.geofabrik.de/europe/poland-latest.osm.pbf
     state: "00"
-    memory: 32g
+    memory: "32g"
   portugal:
     code: PT
     url: https://download.geofabrik.de/europe/portugal-latest.osm.pbf
