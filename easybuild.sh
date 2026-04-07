@@ -268,7 +268,7 @@ download_and_convert() {
     local task_file="$1"
     local work_base="$2"
     
-    IFS=$'\t' read -r country region url state countrycode < "$task_file"
+    IFS=$'\t' read -r country region url state countrycode memory < "$task_file"
     
     local region_work="${work_base}/${country}-${region}"
     mkdir -p "$region_work"

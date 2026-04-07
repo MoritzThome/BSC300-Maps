@@ -47,6 +47,7 @@ countries:
     code: FI
     url: https://download.geofabrik.de/europe/finland-latest.osm.pbf
     state: "00"
+    memory: 8g # needed for single build in ci
   france:
     code: FR
     regions:
