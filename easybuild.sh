@@ -162,7 +162,7 @@ if [ "$PREPARE_ONLY" = true ]; then
         if [ "$VERBOSE" = true ]; then
             bash setup_env.sh || error "Failed to setup osmosis"
         else
-            bash setup_env.sh >/dev/null 2>&1 || error "Failed to setup osmosis"
+            bash setup_env.sh >/dev/null || error "Failed to setup osmosis"
         fi
     else
         log "✓ Osmosis already installed"
@@ -350,7 +350,6 @@ build_type() {
     
     # Read task info inkl. memory
     IFS=$'\t' read -r region_work type code state country region memory < "$task_file"
-    memory="${memory:-$DEFAULT_MEMORY}"  # Fallback
     
     # Check phase 1 success
     if [ ! -f "$region_work/status.txt" ] || [ "$(cat "$region_work/status.txt")" != "OK" ]; then
@@ -392,7 +391,7 @@ build_type() {
     if [ "$VERBOSE" = true ]; then
         "$BASE_DIR/osmosis/osmconvert" tmp_filtered.o5m -o=tmp_filtered.pbf
     else
-        "$BASE_DIR/osmosis/osmconvert" tmp_filtered.o5m -o=tmp_filtered.pbf >/dev/null 2>&1
+        "$BASE_DIR/osmosis/osmconvert" tmp_filtered.o5m -o=tmp_filtered.pbf >/dev/null
     fi
     rm tmp_filtered.o5m
     
@@ -422,7 +421,7 @@ build_type() {
     if [ "$VERBOSE" = true ]; then
         _JAVA_OPTIONS="$java_opts" python3 "$BASE_DIR/generate_map.py" -i "$abs_input" -c "$code" -s "$state" -t "$abs_tag_file"
     else
-        _JAVA_OPTIONS="$java_opts" python3 "$BASE_DIR/generate_map.py" -i "$abs_input" -c "$code" -s "$state" -t "$abs_tag_file" >/dev/null 2>&1
+        _JAVA_OPTIONS="$java_opts" python3 "$BASE_DIR/generate_map.py" -i "$abs_input" -c "$code" -s "$state" -t "$abs_tag_file" >/dev/null
     fi
     
     # Move maps
@@ -516,7 +515,7 @@ log "═════════════════════════
 
 PHASE1_START=$(date +%s)
 
-if command -v parallel >/dev/null 2>&1 && [ "$PARALLEL_JOBS" -gt 1 ]; then
+if command -v parallel >/dev/null && [ "$PARALLEL_JOBS" -gt 1 ]; then
     log "Using GNU parallel with $PARALLEL_JOBS jobs"
     ls "$PHASE1_DIR"/region_*.txt | parallel -j "$PARALLEL_JOBS" download_and_convert {} "$WORK_DIR"
 else
@@ -578,7 +577,7 @@ done
 
 log "Building $TASK_COUNT map(s) ($SUCCEEDED regions × ${#TYPES[@]} types)"
 
-if command -v parallel >/dev/null 2>&1 && [ "$PARALLEL_JOBS" -gt 1 ]; then
+if command -v parallel >/dev/null && [ "$PARALLEL_JOBS" -gt 1 ]; then
     log "Using GNU parallel with $PARALLEL_JOBS jobs"
     ls "$PHASE2_DIR"/task_*.txt | parallel -j "$PARALLEL_JOBS" build_type_with_progress {} "$TASK_COUNT" "$PHASE2_START"
 else
