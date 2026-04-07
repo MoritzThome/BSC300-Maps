@@ -279,7 +279,7 @@ download_and_convert() {
     # Download
     log "  → Downloading OSM data..."
     if [ "$VERBOSE" = true ]; then
-        wget --show-progress "$url" -O tmp.pbf 2>&1
+        wget --no-verbose "$url" -O tmp.pbf 2>&1
     else
         wget -q "$url" -O tmp.pbf 2>&1
     fi
