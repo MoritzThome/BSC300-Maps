@@ -288,7 +288,7 @@ countries:
     code: NO
     url: https://download.geofabrik.de/europe/norway-latest.osm.pbf
     state: "00"
-    memory: "24g"
+    memory: "36g"
   poland:
     code: PL
     url: https://download.geofabrik.de/europe/poland-latest.osm.pbf
