@@ -131,14 +131,19 @@ jobs:
       matrix: ${{ fromJson(needs.generate-build-matrix.outputs.matrix) }}
     
     steps:
+      - name: clean runner storage
+        run: |
+            df -h
+            # sudo rm -rf /usr/local/lib/android
+            # df -h
+            
+
       - name: Set Swap Space for very large countries
         uses: pierotofy/set-swap-space@master
         with:
-          swap-size-gb: 16
+          swap-size-gb: 32    
 
-    
-
-      - name: Build all map types for country
+      - name: Build all map types for country in container
 
         run: |
             docker run -v /work/output/:/work/output/ ${{ needs.build-container.outputs.IMAGE_DIGEST }} -c ${{ matrix.country }} -t ${{ matrix.types }} -j 2 -v

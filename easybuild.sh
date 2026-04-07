@@ -137,7 +137,7 @@ if [ "$PREPARE_ONLY" = true ]; then
     log "Preparing environment..."
     
     log "Checking system tools..."
-    command -v wget >/dev/null 2>&1 || error "wget not found. Install: sudo apt install wget"
+    command -v curl >/dev/null 2>&1 || error "curl not found. Install: sudo apt install curl"
     command -v python3 >/dev/null 2>&1 || error "python3 not found. Install: sudo apt install python3"
     command -v unzip >/dev/null 2>&1 || error "unzip not found. Install: sudo apt install unzip"
     command -v gcc >/dev/null 2>&1 || error "gcc not found. Install: sudo apt install gcc"
@@ -279,9 +279,9 @@ download_and_convert() {
     # Download
     log "  → Downloading OSM data..."
     if [ "$VERBOSE" = true ]; then
-        wget --no-verbose "$url" -O tmp.pbf 2>&1
+        curl -L $url -o tmp.pbf -s -w "%{size_download} %{time_total}\n" | awk 'NF {printf("Downloaded %.2f MB in %.2fs (%.2f MB/s)\n", $1/1048576, $2, ($1/1048576)/$2)}'
     else
-        wget -q "$url" -O tmp.pbf 2>&1
+        curl -L $url -o tmp.pbf -sS 2>&1
     fi
     
     if [ ! -s tmp.pbf ]; then

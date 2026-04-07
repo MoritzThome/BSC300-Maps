@@ -12,7 +12,7 @@ COPY . /work/
 
 RUN apt update -qq && apt install -qqy --no-install-recommends \
     # Core tools
-    wget \
+    curl \
     ca-certificates \
     # Build tools
     gcc \
