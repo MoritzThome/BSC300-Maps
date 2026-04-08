@@ -4,7 +4,7 @@ on:
   push:
     branches: ["**"]
   schedule:
-    - cron: '0 2 * * 0'  # Weekly on Sunday
+    - cron: '0 2 10 * 0'  # Monthly
 
   workflow_dispatch:
 
@@ -164,126 +164,71 @@ jobs:
       contents: write
     
     steps:
-      - uses: actions/checkout@v6
-      
       - name: Download all artifacts
 
         uses: actions/download-artifact@v6
         with:
-          pattern: maps-*
           path: artifacts-raw
 
-      - name: Organize by map type
+      - name: Merge by map type
 
-        run: |
-          mkdir -p release-files
-          
-          echo "Organizing artifacts by map type..."
-          
-          # Structure: artifacts-raw/maps-COUNTRY/TYPE/*.map 
-          # Target:     release-files/TYPE/*.map
-          
-          for country_dir in artifacts-raw/maps-*; do
-            if [ -d "$country_dir" ]; then
-              country=$(basename "$country_dir" | sed 's/^maps-//')
-              echo "Processing: $country"
-              
-              for type_dir in "$country_dir"/*; do
-                if [ -d "$type_dir" ]; then
-                  type_name=$(basename "$type_dir")
-                  mkdir -p "release-files/$type_name"
-                  
-                  # Copy all .map files
-                  map_count=$(find "$type_dir" -name "*.map" | wc -l)
-                  if [ $map_count -gt 0 ]; then
-                    echo "  - $type_name: $map_count maps"
-                    find "$type_dir" -name "*.map" -exec cp {} "release-files/$type_name/" \;
-                  fi
-                fi
-              done
-            fi
+        run: |        
+          for country_dir in artifacts-raw/*; do
+            for type_dir in "$country_dir"/*; do
+              type=$(basename "$type_dir")
+              mkdir -p "release-files/$type"
+              mv "$type_dir"/*.map "release-files/$type/"
+            done
           done
           
-          # Generate summary dynamically
-          echo "## 🗺️ Map Files by Type" > summary.md
-          echo "" >> summary.md
-          echo "Download the archive for your preferred map type." >> summary.md
-          echo "Each archive contains maps for all available countries/regions." >> summary.md
-          echo "" >> summary.md
-          echo "### Available Map Types" >> summary.md
-          echo "" >> summary.md
+          # Generate release notes
+          echo "## 🗺️ Map Files by Type" > release-notes.md
+          echo "" >> release-notes.md
+          echo "Each archive contains maps for all available countries/regions." >> release-notes.md
+          echo "" >> release-notes.md
           
           total_maps=0
-          total_size=0
-          
-          # Read type descriptions from map-types.conf
-          declare -A type_descriptions
-          while IFS='=' read -r key value; do
-            if [[ $key == MAP_TYPE_DESC_* ]]; then
-              type_key=$(echo "$key" | sed 's/MAP_TYPE_DESC_//' | tr '[:upper:]_' '[:lower:]-')
-              type_descriptions[$type_key]=$(echo "$value" | tr -d '"')
-            fi
-          done < map-types.conf
-          
           for type_dir in release-files/*; do
             if [ -d "$type_dir" ]; then
-              type_name=$(basename "$type_dir")
+              type=$(basename "$type_dir")
               count=$(find "$type_dir" -name "*.map" | wc -l)
               size=$(du -sh "$type_dir" | cut -f1)
-              size_bytes=$(du -sb "$type_dir" | cut -f1)
-              
               total_maps=$((total_maps + count))
-              total_size=$((total_size + size_bytes))
               
-              # Get description from map-types.conf or fallback
-              desc="${type_descriptions[$type_name]:-Unknown map type}"
-              
-              echo "#### 📦 \`${type_name}-maps.tar.gz\`" >> summary.md
-              echo "- **Description**: $desc" >> summary.md
-              echo "- **Maps**: $count files" >> summary.md
-              echo "- **Size**: $size" >> summary.md
-              echo "" >> summary.md
+              echo "- **${type}**: $count maps ($size)" >> release-notes.md
             fi
           done
           
-          echo "---" >> summary.md
-          echo "" >> summary.md
-          echo "**Total**: $total_maps map files" >> summary.md
-          echo "" >> summary.md
-          echo "### 📥 Installation" >> summary.md
-          echo "" >> summary.md
-          echo "1. Download desired \`*-maps.tar.gz\` archive" >> summary.md
-          echo "2. Extract: \`tar -xzf MAPTYPE-maps.tar.gz\`" >> summary.md
-          echo "3. Backup existing maps on your iGPSport device" >> summary.md
-          echo "4. Copy \`.map\` files to device via USB" >> summary.md
-          echo "5. Restart device to load new maps" >> summary.md
+          echo "" >> release-notes.md
+          echo "**Total**: $total_maps map files" >> release-notes.md
+          echo "" >> release-notes.md
+          echo "### 📥 Installation" >> release-notes.md
+          echo "" >> release-notes.md
+          echo "1. Download desired \`*-maps.zip\` archive" >> release-notes.md
+          echo "2. Extract ZIP archive" >> release-notes.md
+          echo "3. Backup existing maps on your iGPSport device" >> release-notes.md
+          echo "4. Copy \`.map\` files to device via USB" >> release-notes.md
+          echo "5. Restart device to load new maps" >> release-notes.md
           
-          cat summary.md
-          
-          # Create type-specific archives dynamically
-          echo ""
-          echo "Creating archives..."
+          cat release-notes.md
+
+      - name: Create ZIP archives per map type
+
+        run: |
           cd release-files
           for type_dir in */; do
-            type_name=${type_dir%/}
-            echo "  → ${type_name}-maps.tar.gz"
-            tar -czf "../${type_name}-maps.tar.gz" "$type_dir"
+            type=${type_dir%/}
+            zip -9 -r "../${type}-maps.zip" "$type_dir"
           done
-          cd ..
-          
-          echo ""
-          echo "Release preparation complete!"
-          ls -lh *-maps.tar.gz
+          ls -lh ../*.zip
 
       - name: Create Release
 
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: maps-${{ github.run_number }}-$(date +%Y%m%d-%H%M)
+          tag_name: maps-${{ github.run_number }}-$(date +%Y%m%d)
           name: 🗺️ Maps $(date +%Y-%m-%d)
-          body_path: summary.md
-          files: |
-            *-maps.tar.gz
-          fail_on_unmatched_files: false
+          body_path: release-notes.md
+          files: "*-maps.zip"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
