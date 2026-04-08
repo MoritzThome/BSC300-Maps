@@ -294,7 +294,7 @@ countries:
     code: PL
     url: https://download.geofabrik.de/europe/poland-latest.osm.pbf
     state: "00"
-    memory: "16g"
+    memory: "20g"
   portugal:
     code: PT
     url: https://download.geofabrik.de/europe/portugal-latest.osm.pbf
