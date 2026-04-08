@@ -128,15 +128,29 @@ jobs:
     steps:
       - name: clean runner storage
         run: |
-            df -h
-            # sudo rm -rf /usr/local/lib/android
-            # df -h
+            req=$((32*1024*1024)) # 32gb must be minimal free
+            free(){ df --output=avail -k / | tail -1 | tr -d ' '; }
+
+            echo "Free: $(( $(free)/1024/1024 )) GB"
+            [[ $(free) -ge $req ]] && { echo "Enough space"; exit 0; }
+
+            dirs="/usr/lib/jvm /usr/share/dotnet /usr/share/swift /usr/local/.ghcup /usr/local/julia* /usr/local/lib/android /opt/az /usr/local/share/powershell /opt/hostedtoolcache"
+
+            for d in $dirs; do
+                [[ "${{ inputs.verbose }}" == "true" ]] && echo "Removing $d"
+                sudo rm -rf $d
+                echo "Free: $(( $(free)/1024/1024 )) GB"
+                [[ $(free) -ge $req ]] && { echo "Enough space"; exit 0; }
+            done
+
+            echo "Not enough space"
+            exit 1
             
 
       - name: Set Swap Space for very large countries
         uses: pierotofy/set-swap-space@master
         with:
-          swap-size-gb: 32    
+          swap-size-gb: 16    
 
       - name: Build all map types for country in container
 
