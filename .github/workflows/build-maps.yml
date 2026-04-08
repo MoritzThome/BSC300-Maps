@@ -88,30 +88,25 @@ jobs:
             all_types = ','.join(types)
             matrix = []
             
-            # First: large countries (with memory option)
+            # Large countries first (longer build time)
             for country, config in sorted(data['countries'].items()):
                 if 'memory' in config:
-                    code = config['code']
-                    state = config.get('state', '00')
-                    for map_type in types:
-                        matrix.append({
-                            'country': country,
-                            'display': f"{country} ({map_type})",
-                            'code': code,
-                            'state': state,
-                            'types': map_type
-                        })
+                    matrix.append({
+                        'country': country,
+                        'display': f"{country} (high-mem)",
+                        'code': config['code'],
+                        'state': config.get('state', '00'),
+                        'types': all_types
+                    })
             
-            # Then: normal countries
+            # Normal countries
             for country, config in sorted(data['countries'].items()):
                 if 'memory' not in config:
-                    code = config['code']
-                    state = config.get('state', '00')
                     matrix.append({
                         'country': country,
                         'display': country,
-                        'code': code,
-                        'state': state,
+                        'code': config['code'],
+                        'state': config.get('state', '00'),
                         'types': all_types
                     })
             
@@ -146,7 +141,7 @@ jobs:
       - name: Build all map types for country in container
 
         run: |
-            docker run -v /work/output/:/work/output/ ${{ needs.build-container.outputs.IMAGE_DIGEST }} -c ${{ matrix.country }} -t ${{ matrix.types }} -j 2 -v
+            docker run -v /work/output/:/work/output/ ${{ needs.build-container.outputs.IMAGE_DIGEST }} -c ${{ matrix.country }}  -j 2 -v
           
       - name: Upload artifacts
 

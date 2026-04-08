@@ -577,14 +577,43 @@ done
 
 log "Building $TASK_COUNT map(s) ($SUCCEEDED regions × ${#TYPES[@]} types)"
 
-if command -v parallel >/dev/null && [ "$PARALLEL_JOBS" -gt 1 ]; then
-    log "Using GNU parallel with $PARALLEL_JOBS jobs"
-    ls "$PHASE2_DIR"/task_*.txt | parallel -j "$PARALLEL_JOBS" build_type_with_progress {} "$TASK_COUNT" "$PHASE2_START"
-else
-    for task_file in "$PHASE2_DIR"/task_*.txt; do
+# Separate high-memory tasks
+
+HIGHMEM_TASKS=$(mktemp)
+NORMAL_TASKS=$(mktemp)
+
+for task_file in "$PHASE2_DIR"/task_*.txt; do
+    IFS=$'\t' read -r region_work type code state country region memory < "$task_file"
+    if [ "$memory" != "$DEFAULT_MEMORY" ]; then
+        echo "$task_file" >> "$HIGHMEM_TASKS"
+    else
+        echo "$task_file" >> "$NORMAL_TASKS"
+    fi
+done
+
+HIGHMEM_COUNT=$(wc -l < "$HIGHMEM_TASKS" 2>/dev/null || echo 0)
+NORMAL_COUNT=$(wc -l < "$NORMAL_TASKS" 2>/dev/null || echo 0)
+
+if [ $HIGHMEM_COUNT -gt 0 ]; then
+    log "Building $HIGHMEM_COUNT high-memory map(s) sequentially (j=1)"
+    while read -r task_file; do
         build_type_with_progress "$task_file" "$TASK_COUNT" "$PHASE2_START"
-    done
+    done < "$HIGHMEM_TASKS"
 fi
+
+if [ $NORMAL_COUNT -gt 0 ]; then
+    log "Building $NORMAL_COUNT normal map(s) with $PARALLEL_JOBS jobs"
+    if command -v parallel >/dev/null 2>&1 && [ "$PARALLEL_JOBS" -gt 1 ]; then
+        log "Using GNU parallel with $PARALLEL_JOBS jobs"
+        cat "$NORMAL_TASKS" | parallel -j "$PARALLEL_JOBS" build_type_with_progress {} "$TASK_COUNT" "$PHASE2_START"
+    else
+        while read -r task_file; do
+            build_type_with_progress "$task_file" "$TASK_COUNT" "$PHASE2_START"
+        done < "$NORMAL_TASKS"
+    fi
+fi
+
+rm -f "$HIGHMEM_TASKS" "$NORMAL_TASKS"
 
 PHASE2_END=$(date +%s)
 PHASE2_DURATION=$((PHASE2_END - PHASE2_START))
