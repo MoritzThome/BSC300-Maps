@@ -47,7 +47,7 @@ countries:
     code: FI
     url: https://download.geofabrik.de/europe/finland-latest.osm.pbf
     state: "00"
-    memory: "15g"
+    memory: "13g"
   france:
     code: FR
     regions:
@@ -402,7 +402,7 @@ countries:
     code: UA
     url: https://download.geofabrik.de/europe/ukraine-latest.osm.pbf
     state: "00"
-    memory: "15g"
+    memory: "13g"
   united-kingdom:
     code: GB
     regions:
@@ -415,4 +415,4 @@ countries:
       - name: wales
         url: https://download.geofabrik.de/europe/united-kingdom/wales-latest.osm.pbf
         state: "03"
-    memory: "15g"
+    memory: "13g"
