@@ -28,8 +28,8 @@ tag_file = "tag-igpsport.xml"
 
 
 cmd = (
-    "./osmosis --rbf file={input_map_file} "
-    "--mapfile-writer file={output_map_file} type=ram zoom-interval-conf=13,13,13,14,14,14 threads=1 simplification-factor=0 simplification-max-zoom=20 tag-conf-file={tag_file} "
+    "./osmosis --rbf file={input_map_file} --buffer "
+    "--mapfile-writer file={output_map_file} type=ram zoom-interval-conf=13,13,13,14,14,14 threads=2 simplification-factor=0 simplification-max-zoom=20 tag-conf-file={tag_file} "
 )
 
 if not os.path.isdir(bin_dir):
