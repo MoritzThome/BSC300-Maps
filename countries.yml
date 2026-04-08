@@ -402,6 +402,7 @@ countries:
     code: UA
     url: https://download.geofabrik.de/europe/ukraine-latest.osm.pbf
     state: "00"
+    memory: "12g"
   united-kingdom:
     code: GB
     regions:
