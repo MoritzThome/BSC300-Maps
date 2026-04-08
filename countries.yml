@@ -35,6 +35,7 @@ countries:
     code: CZ
     url: https://download.geofabrik.de/europe/czech-republic-latest.osm.pbf
     state: "00"
+    memory: "13g"
   denmark:
     code: DK
     url: https://download.geofabrik.de/europe/denmark-latest.osm.pbf
