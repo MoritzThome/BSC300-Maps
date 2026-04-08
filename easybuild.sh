@@ -439,9 +439,12 @@ build_type() {
         fi
     done
     
-    [ $moved -eq 0 ] && warn "  No map created for $type"
-    
-    rm tmp_filtered.pbf 2>/dev/null || true
+    [ $moved -eq 0 ] && { 
+        warn "  No map created for $type"
+        echo "$country/$region/$type" >> "$BASE_DIR/$OUTPUT_BASE/../failed_builds.txt"
+    }
+
+rm tmp_filtered.pbf 2>/dev/null || true
 }
 
 # Export functions for parallel
@@ -555,6 +558,8 @@ log "PHASE 2: Build Map Types"
 log "═══════════════════════════════════════════"
 
 PHASE2_START=$(date +%s)
+FAILED_BUILDS="$WORK_DIR/failed_builds.txt"
+touch "$FAILED_BUILDS"
 
 # Create phase 2 task files
 
@@ -660,5 +665,12 @@ if [ "$MAP_COUNT" -gt 0 ]; then
 fi
 
 log "════════════════════════════════════════════"
+
+if [ -f "$WORK_DIR/failed_builds.txt" ] && [ -s "$WORK_DIR/failed_builds.txt" ]; then
+    log ""
+    error "Some builds FAILED:"
+    cat "$WORK_DIR/failed_builds.txt" >&2
+    exit 2
+fi
 
 exit 0
