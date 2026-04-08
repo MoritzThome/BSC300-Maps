@@ -44,6 +44,8 @@ COUNTRIES=""
 OUTPUT_BASE="output"
 CONFIG_FILE="$BASE_DIR/countries.yml"
 DEFAULT_MEMORY="8g"
+FAILED_BUILDS="$WORK_DIR/failed_builds.txt"
+touch "$FAILED_BUILDS"
 
 
 if [ -z "${_JAVA_OPTIONS+x}" ]; then
@@ -441,7 +443,7 @@ build_type() {
     
     [ $moved -eq 0 ] && { 
         warn "  No map created for $type"
-        echo "$country/$region/$type" >> "$BASE_DIR/$OUTPUT_BASE/../failed_builds.txt"
+        echo "$country/$region/$type" >> "$FAILED_BUILDS"
     }
 
     rm tmp_filtered.pbf 2>/dev/null || true
@@ -451,7 +453,7 @@ build_type() {
 
 export -f download_and_convert build_type format_duration log info warn error debug
 export -f get_filter_cmd get_modify_cmd get_tag_file get_description is_valid_map_type
-export VERBOSE BASE_DIR OUTPUT_BASE AUTO_JAVA_MEM DEFAULT_MEMORY CONFIG_FILE
+export VERBOSE BASE_DIR OUTPUT_BASE AUTO_JAVA_MEM DEFAULT_MEMORY CONFIG_FILE FAILED_BUILDS
 
 # ═══════════════════════════════════════════════════════════
 
@@ -558,8 +560,7 @@ log "PHASE 2: Build Map Types"
 log "═══════════════════════════════════════════"
 
 PHASE2_START=$(date +%s)
-FAILED_BUILDS="$WORK_DIR/failed_builds.txt"
-touch "$FAILED_BUILDS"
+
 
 # Create phase 2 task files
 
@@ -666,10 +667,9 @@ fi
 
 log "════════════════════════════════════════════"
 
-if [ -f "$WORK_DIR/failed_builds.txt" ] && [ -s "$WORK_DIR/failed_builds.txt" ]; then
-    log ""
-    error "Some builds FAILED:"
-    cat "$WORK_DIR/failed_builds.txt" >&2
+if [ -f "$FAILED_BUILDS" ] && [ -s "$FAILED_BUILDS" ]; then
+    warn "Some builds FAILED:"
+    cat "$FAILED_BUILDS"
     exit 2
 fi
 
