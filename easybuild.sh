@@ -444,7 +444,7 @@ build_type() {
         echo "$country/$region/$type" >> "$BASE_DIR/$OUTPUT_BASE/../failed_builds.txt"
     }
 
-rm tmp_filtered.pbf 2>/dev/null || true
+    rm tmp_filtered.pbf 2>/dev/null || true
 }
 
 # Export functions for parallel
