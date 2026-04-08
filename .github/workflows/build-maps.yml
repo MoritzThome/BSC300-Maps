@@ -139,7 +139,7 @@ jobs:
       - name: Set Swap Space for very large countries
         uses: pierotofy/set-swap-space@master
         with:
-          swap-size-gb: 16    
+          swap-size-gb: 20    
 
       - name: Build all map types for country in container
 
