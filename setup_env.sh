@@ -4,7 +4,7 @@ set -e
 
 # If osmosis environment needs to be created, the below versions of the tools will be used
 OSMOSIS_VERSION="0.49.2"
-MAPSFORGE_VERSION="0.25.0"
+MAPSFORGE_VERSION="0.27.0"
 
 BIN_DIR=osmosis
 
@@ -19,7 +19,7 @@ mv ${TEMP_DIR}/osmosis/osmosis*/ ${BIN_DIR}
 
 mkdir -p "${BIN_DIR}/bin/plugins"
 curl -L -o "${BIN_DIR}/bin/plugins/mapsforge-map-writer-${MAPSFORGE_VERSION}-jar-with-dependencies.jar" \
-"https://repo1.maven.org/maven2/org/mapsforge/mapsforge-map-writer/${MAPSFORGE_VERSION}/mapsforge-map-writer-${MAPSFORGE_VERSION}-jar-with-dependencies.jar"
+"https://github.com/mapsforge/mapsforge/releases/download/${MAPSFORGE_VERSION}/mapsforge-map-writer-${MAPSFORGE_VERSION}-jar-with-dependencies.jar"
 
 # compile native tools
 gcc native_tools/osmconvert.c -O3 -lz -o osmosis/osmconvert
