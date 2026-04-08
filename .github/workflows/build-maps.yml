@@ -81,11 +81,6 @@ jobs:
             with open('countries.yml') as f:
                 data = yaml.safe_load(f)
             
-            with open('map-types.conf') as f:
-                types = [line.split('=')[0].replace('MAP_TYPE_DESC_', '').replace('_', '-').lower() 
-                        for line in f if line.startswith('MAP_TYPE_DESC_')]
-            
-            all_types = ','.join(types)
             matrix = []
             
             # Large countries first (longer build time)
@@ -93,10 +88,7 @@ jobs:
                 if 'memory' in config:
                     matrix.append({
                         'country': country,
-                        'display': f"{country} (high-mem)",
-                        'code': config['code'],
-                        'state': config.get('state', '00'),
-                        'types': all_types
+                        'display': country
                     })
             
             # Normal countries
@@ -104,10 +96,7 @@ jobs:
                 if 'memory' not in config:
                     matrix.append({
                         'country': country,
-                        'display': country,
-                        'code': config['code'],
-                        'state': config.get('state', '00'),
-                        'types': all_types
+                        'display': country
                     })
             
             with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
