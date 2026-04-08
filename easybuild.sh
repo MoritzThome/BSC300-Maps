@@ -49,11 +49,10 @@ touch "$FAILED_BUILDS"
 
 
 if [ -z "${_JAVA_OPTIONS+x}" ]; then
-    export _JAVA_OPTIONS="-Xmx${DEFAULT_MEMORY}"
     AUTO_JAVA_MEM=true
 else
     AUTO_JAVA_MEM=false
-    debug "Using external _JAVA_OPTIONS: $_JAVA_OPTIONS"
+    debug "found external _JAVA_OPTIONS: $_JAVA_OPTIONS"
 fi
 
 usage() {
@@ -414,7 +413,7 @@ build_type() {
     # Use memory from config or external override
     local java_opts
     if [ "$AUTO_JAVA_MEM" = true ]; then
-        java_opts="-Xmx${memory} -XX:+UseG1GC -XX:+UseLargePages -XX:LargePageSizeInBytes=2m -XX:+UseStringDeduplication "
+        java_opts="-Xmx${memory} -Xms4g -XX:+UseG1GC -XX:+UseStringDeduplication "
         debug "Using memory from config for $country: $java_opts"
     else
         java_opts="$_JAVA_OPTIONS"
