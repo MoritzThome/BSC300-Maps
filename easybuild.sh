@@ -423,7 +423,7 @@ build_type() {
     if [ "$VERBOSE" = true ]; then
         _JAVA_OPTIONS="$java_opts" python3 "$BASE_DIR/generate_map.py" -i "$abs_input" -c "$code" -s "$state" -t "$abs_tag_file"
     else
-        _JAVA_OPTIONS="$java_opts" python3 "$BASE_DIR/generate_map.py" -i "$abs_input" -c "$code" -s "$state" -t "$abs_tag_file" >/dev/null
+        _JAVA_OPTIONS="$java_opts" python3 "$BASE_DIR/generate_map.py" -i "$abs_input" -c "$code" -s "$state" -t "$abs_tag_file" >/dev/null 2>&1
     fi
     
     # Move maps
