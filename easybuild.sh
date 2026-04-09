@@ -219,9 +219,10 @@ for country_spec in countries_to_build:
         
         # Find the specific region
         found = False
-        for r in d['regions']:
+        for idx, r in enumerate(d['regions'], start=1):  # ← GEÄNDERT: enumerate mit start=1
             if r['name'] == requested_region:
-                print(f"{country}\t{r['name']}\t{r['url']}\t{r['state']}\t{d['code']}\t{memory}")
+                state = f"{idx:02d}00"  # ← NEU: Auto-generiert
+                print(f"{country}\t{r['name']}\t{r['url']}\t{state}\t{d['code']}\t{memory}")
                 found = True
                 break
         
@@ -241,11 +242,13 @@ for country_spec in countries_to_build:
         
         if 'regions' in d:
             # Country with regions - output all
-            for r in d['regions']:
-                print(f"{country}\t{r['name']}\t{r['url']}\t{r['state']}\t{d['code']}\t{memory}")
+            for idx, r in enumerate(d['regions'], start=1):  # ← GEÄNDERT: enumerate mit start=1
+                state = f"{idx:02d}00"  # ← NEU: Auto-generiert
+                print(f"{country}\t{r['name']}\t{r['url']}\t{state}\t{d['code']}\t{memory}")
         else:
             # Single-file country
-            print(f"{country}\t{country}\t{d['url']}\t{d.get('state','00')}\t{d['code']}\t{memory}")
+            state = "0000"  # ← NEU: Immer 0000 für Länder ohne Regionen
+            print(f"{country}\t{country}\t{d['url']}\t{state}\t{d['code']}\t{memory}")
 PYEOF
 }
 
