@@ -170,7 +170,31 @@ countries:
     url: https://download.geofabrik.de/europe/montenegro-latest.osm.pbf
   netherlands:
     code: NL
-    url: https://download.geofabrik.de/europe/netherlands-latest.osm.pbf
+    regions:
+      - name: drenthe
+        url: https://download.geofabrik.de/europe/netherlands/drenthe-latest.osm.pbf
+      - name: flevoland
+        url: https://download.geofabrik.de/europe/netherlands/flevoland-latest.osm.pbf
+      - name: friesland
+        url: https://download.geofabrik.de/europe/netherlands/friesland-latest.osm.pbf
+      - name: gelderland
+        url: https://download.geofabrik.de/europe/netherlands/gelderland-latest.osm.pbf
+      - name: groningen
+        url: https://download.geofabrik.de/europe/netherlands/groningen-latest.osm.pbf
+      - name: limburg
+        url: https://download.geofabrik.de/europe/netherlands/limburg-latest.osm.pbf
+      - name: noord-brabant
+        url: https://download.geofabrik.de/europe/netherlands/noord-brabant-latest.osm.pbf
+      - name: noord-holland
+        url: https://download.geofabrik.de/europe/netherlands/noord-holland-latest.osm.pbf
+      - name: overijssel
+        url: https://download.geofabrik.de/europe/netherlands/overijssel-latest.osm.pbf
+      - name: utrecht
+        url: https://download.geofabrik.de/europe/netherlands/utrecht-latest.osm.pbf
+      - name: zeeland
+        url: https://download.geofabrik.de/europe/netherlands/zeeland-latest.osm.pbf
+      - name: zuid-holland
+        url: https://download.geofabrik.de/europe/netherlands/zuid-holland-latest.osm.pbf
   north-macedonia:
     code: MK
     url: https://download.geofabrik.de/europe/macedonia-latest.osm.pbf
