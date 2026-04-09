@@ -314,6 +314,40 @@ download_and_convert() {
 }
 
 
+# Progress wrapper function
+
+build_type_with_progress() {
+    local task_file="$1"
+    local total="$2"
+    local start_time="$3"
+    
+    # Extract task number from filename (task_42.txt -> 42)
+    local task_num=$(basename "$task_file" | sed 's/task_\([0-9]*\)\.txt/\1/')
+    
+    # Build the type
+    build_type "$task_file"
+    local result=$?
+    
+    # Calculate stats
+    local elapsed=$(($(date +%s) - start_time))
+    local percent=$((task_num * 100 / total))
+    
+    # Calculate ETA
+    local eta_str=""
+    if [ $task_num -gt 0 ]; then
+        local avg_time=$((elapsed / task_num))
+        local remaining=$((total - task_num))
+        local eta_seconds=$((avg_time * remaining))
+        eta_str=" | ETA: $(format_duration $eta_seconds)"
+    fi
+    
+    log "Progress: $task_num/$total ($percent%) | Elapsed: $(format_duration $elapsed)$eta_str"
+    
+    return $result
+}
+
+export -f build_type_with_progress
+
 # Phase 2: Build one type for one region
 build_type() {
     local task_file="$1"
@@ -489,11 +523,11 @@ log "═════════════════════════
 
 PHASE1_START=$(date +%s)
 
-if command -v parallel >/dev/null; then
+if command -v parallel >/dev/null && [ "$PARALLEL_JOBS" -gt 1 ]; then
     log "Using GNU parallel with $PARALLEL_JOBS jobs"
-    ls "$PHASE1_DIR"/region_*.txt | parallel --eta --progress -j "$PARALLEL_JOBS" download_and_convert {} "$WORK_DIR"
+    ls "$PHASE1_DIR"/region_*.txt | parallel -j "$PARALLEL_JOBS" download_and_convert {} "$WORK_DIR"
 else
-    [ "$PARALLEL_JOBS" -gt 1 ] && warn "GNU parallel not found, using sequential without progress"
+    [ "$PARALLEL_JOBS" -gt 1 ] && warn "GNU parallel not found, using sequential"
     for task_file in "$PHASE1_DIR"/region_*.txt; do
         download_and_convert "$task_file" "$WORK_DIR"
     done
@@ -569,19 +603,21 @@ done
 HIGHMEM_COUNT=$(wc -l < "$HIGHMEM_TASKS" 2>/dev/null || echo 0)
 NORMAL_COUNT=$(wc -l < "$NORMAL_TASKS" 2>/dev/null || echo 0)
 
+if [ $HIGHMEM_COUNT -gt 0 ]; then
+    log "Building $HIGHMEM_COUNT high-memory map(s) sequentially (j=1)"
+    while read -r task_file; do
+        build_type_with_progress "$task_file" "$TASK_COUNT" "$PHASE2_START"
+    done < "$HIGHMEM_TASKS"
+fi
 
 if [ $NORMAL_COUNT -gt 0 ]; then
     log "Building $NORMAL_COUNT normal map(s) with $PARALLEL_JOBS jobs"
-    if command -v parallel >/dev/null 2>&1; then
-        if [ $HIGHMEM_COUNT -gt 0 ]; then
-            log "Building $HIGHMEM_COUNT high-memory map(s) sequentially (j=1)"
-            cat "$HIGHMEM_TASKS" | parallel --eta --progress -j 1 build_type {} "$TASK_COUNT" "$PHASE2_START"
-        fi
+    if command -v parallel >/dev/null 2>&1 && [ "$PARALLEL_JOBS" -gt 1 ]; then
         log "Using GNU parallel with $PARALLEL_JOBS jobs"
-        cat "$NORMAL_TASKS" | parallel --eta --progress -j "$PARALLEL_JOBS" build_type {} "$TASK_COUNT" "$PHASE2_START"
+        cat "$NORMAL_TASKS" | parallel -j "$PARALLEL_JOBS" build_type_with_progress {} "$TASK_COUNT" "$PHASE2_START"
     else
         while read -r task_file; do
-            build_type "$task_file" "$TASK_COUNT" "$PHASE2_START"
+            build_type_with_progress "$task_file" "$TASK_COUNT" "$PHASE2_START"
         done < "$NORMAL_TASKS"
     fi
 fi
