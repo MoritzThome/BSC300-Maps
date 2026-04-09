@@ -36,7 +36,7 @@ countries:
   finland:
     code: FI
     url: https://download.geofabrik.de/europe/finland-latest.osm.pbf
-    memory: "20g"
+    memory: "28g"
   france:
     code: FR
     regions:
