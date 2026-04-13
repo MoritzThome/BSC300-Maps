@@ -33,11 +33,6 @@ countries:
   estonia:
     code: EE
     url: https://download.geofabrik.de/europe/estonia-latest.osm.pbf
-  finland:
-    code: FI
-    url: https://download.geofabrik.de/europe/finland-latest.osm.pbf
-    memory: "20g"
-    single-job: true
   france:
     code: FR
     regions:
