@@ -186,7 +186,6 @@ jobs:
     name: Combine all maps
     runs-on: ubuntu-latest
     needs: build-maps
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     
     steps:
       - name: Download all artifacts
@@ -214,7 +213,7 @@ jobs:
 
         uses: actions/upload-artifact@v6
         with:
-          name: iGPSPORT-Maps-${{ steps.date.outputs.date }}
+          name: ${{ steps.date.outputs.date }}-iGPSPORT-Maps
           path: release-files/
           if-no-files-found: error
           retention-days: 90
