@@ -182,13 +182,11 @@ jobs:
           path: /work/output/*/*.map
           if-no-files-found: warn
 
-  release:
-    name: Create Release
+  combine:
+    name: Combine all maps
     runs-on: ubuntu-latest
     needs: build-maps
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    permissions:
-      contents: write
     
     steps:
       - name: Download all artifacts
@@ -198,6 +196,7 @@ jobs:
           path: artifacts-raw
 
       - name: Merge by map type
+        id: date
 
         run: |        
           for country_dir in artifacts-raw/*; do
@@ -206,57 +205,17 @@ jobs:
               mkdir -p "release-files/$type"
               mv "$type_dir"/*.map "release-files/$type/"
             done
-          done
-          
-          # Generate release notes
-          echo "## 🗺️ Map Files by Type" > release-notes.md
-          echo "" >> release-notes.md
-          echo "Each archive contains maps for all available countries/regions." >> release-notes.md
-          echo "" >> release-notes.md
-          
-          total_maps=0
-          for type_dir in release-files/*; do
-            if [ -d "$type_dir" ]; then
-              type=$(basename "$type_dir")
-              count=$(find "$type_dir" -name "*.map" | wc -l)
-              size=$(du -sh "$type_dir" | cut -f1)
-              total_maps=$((total_maps + count))
-              
-              echo "- **${type}**: $count maps ($size)" >> release-notes.md
-            fi
-          done
-          
-          echo "" >> release-notes.md
-          echo "**Total**: $total_maps map files" >> release-notes.md
-          echo "" >> release-notes.md
-          echo "### 📥 Installation" >> release-notes.md
-          echo "" >> release-notes.md
-          echo "1. Download desired \`*-maps.zip\` archive" >> release-notes.md
-          echo "2. Extract ZIP archive" >> release-notes.md
-          echo "3. Backup existing maps on your iGPSport device" >> release-notes.md
-          echo "4. Copy \`.map\` files to device via USB" >> release-notes.md
-          echo "5. Restart device to load new maps" >> release-notes.md
-          
-          cat release-notes.md
+          done         
+          du -hd 1 release-files/
+          echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
 
-      - name: Create ZIP archives per map type
 
-        run: |
-          cd release-files
-          for type_dir in */; do
-            type=${type_dir%/}
-            zip -9 -r "../${type}-maps.zip" "$type_dir"
-            rm -rf "$type_dir"
-          done
-          ls -lh ../*.zip
+      - name: Upload artifacts
 
-      - name: Create Release
-
-        uses: softprops/action-gh-release@v2
+        uses: actions/upload-artifact@v6
         with:
-          tag_name: maps-${{ github.run_number }}-$(date +%Y%m%d)
-          name: 🗺️ Maps $(date +%Y-%m-%d)
-          body_path: release-notes.md
-          files: "*-maps.zip"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          name: iGPSPORT-Maps-${{ steps.date.outputs.date }}
+          path: release-files/
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 9
