@@ -4,7 +4,7 @@ on:
   push:
     branches: ["**"]
   schedule:
-    - cron: '6 1 02 * 0'  # Monthly
+    - cron: '6 1 15 * 0'  # Monthly
 
   workflow_dispatch:
 
@@ -207,6 +207,59 @@ jobs:
           done         
           du -hd 1 release-files/
           echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+
+      - name: Create per-type release zips (<2GB each)
+
+        run: |
+          set -euo pipefail
+          MAX=$((2*1024*1024*1024))  # 2 GiB
+          mkdir -p release-zips
+
+          for type_dir in release-files/*; do
+            [ -d "$type_dir" ] || continue
+            type="$(basename "$type_dir")"
+            part=1
+            used=0
+            zip=""
+
+            for f in "$type_dir"/*.map; do
+              [ -e "$f" ] || continue
+              size=$(stat -c%s "$f")
+
+              # neues Archiv anfangen, wenn Summe > 2GB wäre
+              if [ "$used" -gt 0 ] && [ $((used + size)) -gt "$MAX" ]; then
+                part=$((part + 1))
+                used=0
+                zip=""
+              fi
+
+              if [ -z "$zip" ]; then
+                zip="release-zips/${type}-part${part}.zip"
+              fi
+
+              zip -9 -j "$zip" "$f" >/dev/null
+              used=$((used + size))
+            done
+          done
+          du -hd 1 release-zips/
+
+      - name: Create GitHub Release
+
+        if: github.event_name == 'schedule'
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ steps.date.outputs.date }}
+          name: iGPSPORT Maps ${{ steps.date.outputs.date }}
+          body: |
+            # iGPSPORT Maps ${{ steps.date.outputs.date }}
+            1. from [Github Releases](https://github.com/MoritzThome/BSC300-Maps/releases)
+            2. Download desired map archive (specific combined release)
+            3. Extract ZIP archive on your machine
+            4. Copy existing maps from your iGPSport device to backup (yes, copy speed is only 450kb/s)
+            5. Copy \`.map\` files to device via USB
+            6. Restart device to load new maps
+          files: |
+            release-zips/*
 
 
       - name: Upload artifacts
