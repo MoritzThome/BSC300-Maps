@@ -246,6 +246,7 @@ jobs:
           for type_dir in */; do
             type=${type_dir%/}
             zip -9 -r "../${type}-maps.zip" "$type_dir"
+            rm -rf "$type_dir"
           done
           ls -lh ../*.zip
 
