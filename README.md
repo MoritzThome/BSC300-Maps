@@ -2,12 +2,20 @@
 
 # IGPSPORT BSC300 / BSC300T Map Creator
 
-This is a clone from https://github.com/adrianf0/bsc300_maps and https://github.com/manujedi/BSC300-Maps with an added universal script step so github builds maps but you can also built it yourself in an easy container, easy extensible. If you are logged in to github you should be able to download the artifacts.
+This is a clone from https://github.com/adrianf0/bsc300_maps and https://github.com/manujedi/BSC300-Maps with an added universal script and many performance improvements so github builds maps but you can also built it yourself in an easy container, easy extensible.
+
+## Maps Types
+* `streets-only`: smallest one
+* `steets-names`: same as `streets-only` but with names
+* `water`: same as `streets-names` but including lakes, rivers, ...
+* `green`: same as `water`, but including forests, grass, ... (biggest map, but i like it)
+
+They are defined in `map-types.conf`.
 
 ## Download monthly rebuilt maps
-1. from [Github Actions](https://github.com/MoritzThome/BSC300-Maps/actions/workflows/build-maps.yml)
-2. Download desired map archive (specific combined release)
-3. Extract ZIP archive on your machine
+1. from [Github Releases](https://github.com/MoritzThome/BSC300-Maps/releases)
+2. Download desired map archives (githubs max file size is 2GB, therefore Map Types are split into multiple archives containing different countries)
+3. Extract ZIPs archive on your machine
 4. Copy existing maps from your iGPSport device to backup (yes, copy speed is only 450kb/s)
 5. Copy \`.map\` files to device via USB
 6. Restart device to load new maps
@@ -26,7 +34,7 @@ Files will be placed in your current Working directory.
 
 You can also run the script `./easybuild.sh` without docker, but dependencies are needed then.
 
-## detailed Information
+## Detailed Information
 
 It is based on the description by CYMES [source](https://www.pepper.pl/dyskusji/igpsport-bsc300-informacje-o-mapach-1046955?page=2#comments) but the maps are heavily filtered and modified.
 

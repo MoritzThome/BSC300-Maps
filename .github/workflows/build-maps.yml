@@ -4,7 +4,7 @@ on:
   push:
     branches: ["**"]
   schedule:
-    - cron: '6 1 02 * 0'  # Monthly
+    - cron: '6 1 17 * 0'  # Monthly
 
   workflow_dispatch:
 
@@ -181,11 +181,13 @@ jobs:
           name: ${{ matrix.country }}${{ matrix.map_type && format('-{0}', matrix.map_type) || '' }}
           path: /work/output/*/*.map
           if-no-files-found: warn
+          retention-days: 30
 
   combine:
     name: Combine all maps
     runs-on: ubuntu-latest
     needs: build-maps
+    if: always()
     
     steps:
       - name: Download all artifacts
@@ -208,7 +210,6 @@ jobs:
           du -hd 1 release-files/
           echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
 
-
       - name: Upload artifacts
 
         uses: actions/upload-artifact@v6
@@ -218,3 +219,57 @@ jobs:
           if-no-files-found: error
           retention-days: 90
           compression-level: 9
+
+      - name: Create per-type release zips (<2GB each)
+
+        run: |
+          set -euo pipefail
+          MAX=$((2048*1024*1024))  # 2 GiB 
+          mkdir -p release-zips
+
+          for type_dir in release-files/*; do
+            [ -d "$type_dir" ] || continue
+            type="$(basename "$type_dir")"
+            part=1
+            used=0
+            zip=""
+
+            for f in "$type_dir"/*.map; do
+              [ -e "$f" ] || continue
+              size=$(stat -c%s "$f")
+
+              # start new archive over 2GB
+              if [ "$used" -gt 0 ] && [ $((used + size)) -gt "$MAX" ]; then
+                part=$((part + 1))
+                used=0
+                zip=""
+              fi
+
+              if [ -z "$zip" ]; then
+                zip="release-zips/${type}-part${part}.zip"
+              fi
+
+              zip -9 -j "$zip" "$f" >/dev/null
+              used=$((used + size))
+            done
+            rm -rf $type_dir
+          done
+          ls -lhart release-zips/
+
+      - name: Create GitHub Release
+
+        if: github.event_name == 'schedule'
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ steps.date.outputs.date }}
+          name: iGPSPORT Maps ${{ steps.date.outputs.date }}
+          body: |
+            # iGPSPORT Maps ${{ steps.date.outputs.date }}
+            1. from [Github Releases](https://github.com/MoritzThome/BSC300-Maps/releases)
+            2. Download desired map archives (githubs max file size is 2GB, therefore Map Types are split into multiple archives containing different countries)
+            3. Extract ZIPs archive on your machine
+            4. Copy existing maps from your iGPSport device to backup (yes, copy speed is only 450kb/s)
+            5. Copy \`.map\` files to device via USB
+            6. Restart device to load new maps
+          files: |
+            release-zips/*
