@@ -12,6 +12,13 @@ This is a clone from https://github.com/adrianf0/bsc300_maps and https://github.
 
 They are defined in [map-types.conf](conf/map-types.conf).
 
+## Countries
+Some countries do not have smaller regions in Geofabrik and are too big for default processing memory (8 GB) of map writer. Therefore the overwrite this default with the key `memory` (like Ukraine). Then this country will be built sequentially, even if called with `-j 4`.
+
+For Finland, this was not enough. Here subregions are created with key `bbox` to split the country into multiple. This is experimental.
+
+Countries are defined in [countries.yml](conf/countries.yml).
+
 ## Download monthly rebuilt maps
 1. from [Github Releases](https://github.com/MoritzThome/BSC300-Maps/releases)
 2. Download desired map archives (githubs max file size is 2GB, therefore Map Types are split into multiple archives containing different countries)
