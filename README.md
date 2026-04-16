@@ -10,7 +10,7 @@ This is a clone from https://github.com/adrianf0/bsc300_maps and https://github.
 * `water`: same as `streets-names` but including lakes, rivers, ...
 * `green`: same as `water`, but including forests, grass, ... (biggest map, but i like it)
 
-They are defined in `map-types.conf`.
+They are defined in [map-types.conf](conf/map-types.conf).
 
 ## Download monthly rebuilt maps
 1. from [Github Releases](https://github.com/MoritzThome/BSC300-Maps/releases)
@@ -62,7 +62,7 @@ cycleway is useless as it is not rendered on the device (too crowded) | everythi
 - Renderer on the BSC300:
   - anything you want green use landuse=grass (--modify-tags="landuse=something to =grass" or leisure=garden to landuse=grass)
   - it can only render some amount of roads/ways. Even the original maps are not rendered fully. Random roads are missing.
-    - thats the reason why I [filter extensively](template_state_country.yml) which ways to add.
+    - thats the reason why I [filter extensively](conf/map-types.conf) which ways to add.
   - Code on this repo does not use simplification-factor for zoom levels 13 and 14. Original uses some factor > 0.5 making the maps even smaller but less accurate 
 
   - Supported tags (colors from night mode):

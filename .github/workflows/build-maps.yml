@@ -82,7 +82,13 @@ jobs:
                 data = yaml.safe_load(f)
             
             # Map types from map-types.conf
-            MAP_TYPES = ["streets-only", "water", "streets-names", "green"]
+            MAP_TYPES = []
+            with open('conf/map-types.conf') as f:
+              for line in f:
+                  line = line.strip()
+                  if line.startswith('AVAILABLE_MAP_TYPES='):
+                      MAP_TYPES = line.split('"')[1].split()
+                      break
             
             matrix = []
             large_countries = []
