@@ -33,6 +33,22 @@ countries:
   estonia:
     code: EE
     url: https://download.geofabrik.de/europe/estonia-latest.osm.pbf
+  finland:
+    code: FI
+    regions:
+      - name: south
+        url: https://download.geofabrik.de/europe/finland-latest.osm.pbf
+        bbox: "19.0,59.4,32.0,63.0"
+      - name: central
+        url: https://download.geofabrik.de/europe/finland-latest.osm.pbf
+        bbox: "19.0,63.0,32.0,65.5"
+      - name: north-west
+        url: https://download.geofabrik.de/europe/finland-latest.osm.pbf
+        bbox: "19.0,65.5,26.0,70.2"
+      - name: north-east
+        url: https://download.geofabrik.de/europe/finland-latest.osm.pbf
+        bbox: "26.0,65.5,32.0,70.2"
+    memory: "13g"
   france:
     code: FR
     regions:

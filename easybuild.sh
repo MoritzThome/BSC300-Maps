@@ -127,7 +127,6 @@ while getopts "pat:j:c:o:vh" opt; do
     esac
 done
 
-# Default: wenn keine types angegeben, alle bauen
 
 if [ ${#TYPES[@]} -eq 0 ]; then
     read -ra TYPES <<< "$AVAILABLE_MAP_TYPES"
@@ -216,7 +215,7 @@ else:
     countries_to_build = [c.strip() for c in sys.argv[2].split(',')]
 
 for country_spec in countries_to_build:
-    # Check if specific region requested: "germany/bayern"
+    # Check if specific region requested, e.g. "germany/bayern"
     if '/' in country_spec:
         country, requested_region = country_spec.split('/', 1)
         country = country.strip()
@@ -235,10 +234,10 @@ for country_spec in countries_to_build:
         
         # Find the specific region
         found = False
-        for idx, r in enumerate(d['regions'], start=1):  # ← GEÄNDERT: enumerate mit start=1
+        for idx, r in enumerate(d['regions'], start=1):
             if r['name'] == requested_region:
-                state = f"{idx:02d}00"  # ← NEU: Auto-generiert
-                print(f"{country}\t{r['name']}\t{r['url']}\t{state}\t{d['code']}\t{memory}")
+                state = f"{idx:02d}00" 
+                print(f"{country}\t{r['name']}\t{r['url']}\t{state}\t{d['code']}\t{memory}\t{r.get('bbox', '')}")
                 found = True
                 break
         
@@ -258,12 +257,12 @@ for country_spec in countries_to_build:
         
         if 'regions' in d:
             # Country with regions - output all
-            for idx, r in enumerate(d['regions'], start=1):  # ← GEÄNDERT: enumerate mit start=1
-                state = f"{idx:02d}00"  # ← NEU: Auto-generiert
-                print(f"{country}\t{r['name']}\t{r['url']}\t{state}\t{d['code']}\t{memory}")
+            for idx, r in enumerate(d['regions'], start=1):
+                state = f"{idx:02d}00"
+                print(f"{country}\t{r['name']}\t{r['url']}\t{state}\t{d['code']}\t{memory}\t{r.get('bbox', '')}")
         else:
             # Single-file country
-            state = "0000"  # ← NEU: Immer 0000 für Länder ohne Regionen
+            state = "0000"
             print(f"{country}\t{country}\t{d['url']}\t{state}\t{d['code']}\t{memory}")
 PYEOF
 }
@@ -288,7 +287,7 @@ download_and_convert() {
     local task_file="$1"
     local work_base="$2"
     
-    IFS=$'\t' read -r country region url state countrycode memory < "$task_file"
+    IFS=$'\t' read -r country region url state countrycode memory bbox< "$task_file"
     
     local region_work="${work_base}/${country}-${region}"
     mkdir -p "$region_work"
@@ -311,12 +310,25 @@ download_and_convert() {
     fi
     
     # Convert to O5M
-    log "  → Converting to O5M..."
-    if [ "$VERBOSE" = true ]; then
-        "$BASE_DIR/osmosis/osmconvert" tmp.pbf -o=tmp.o5m
+    if [ -n "$bbox" ]; then
+        log "  → Cutting bbox=$bbox ..."
+        if [ "$VERBOSE" = true ]; then
+            "$BASE_DIR/osmosis/osmconvert" tmp.pbf \
+                "-b=$bbox" --complete-ways --complete-multipolygons -o=tmp.o5m
+        else
+            "$BASE_DIR/osmosis/osmconvert" tmp.pbf \
+                "-b=$bbox" --complete-ways --complete-multipolygons -o=tmp.o5m >/dev/null 2>&1
+        fi
     else
-        "$BASE_DIR/osmosis/osmconvert" tmp.pbf -o=tmp.o5m >/dev/null 2>&1
+        log "  → Converting to O5M..."
+        if [ "$VERBOSE" = true ]; then
+            "$BASE_DIR/osmosis/osmconvert" tmp.pbf -o=tmp.o5m
+        else
+            "$BASE_DIR/osmosis/osmconvert" tmp.pbf -o=tmp.o5m >/dev/null 2>&1
+        fi
     fi
+
+    rm tmp.pbf
     
     if [ ! -s tmp.o5m ]; then
         warn "  Convert failed: $country/$region"
@@ -324,9 +336,8 @@ download_and_convert() {
         return 1
     fi
     
-    rm tmp.pbf
     echo "OK" > status.txt
-    log "  ✓ Ready for type builds"
+    log "  ✓ Ready for map-type builds"
 }
 
 
@@ -369,7 +380,7 @@ build_type() {
     local task_file="$1"
     
     # Read task info inkl. memory
-    IFS=$'\t' read -r region_work type code state country region memory < "$task_file"
+    IFS=$'\t' read -r region_work type code state country region memory bbox < "$task_file"
     
     # Check phase 1 success
     if [ ! -f "$region_work/status.txt" ] || [ "$(cat "$region_work/status.txt")" != "OK" ]; then
@@ -514,10 +525,10 @@ PHASE1_DIR="$WORK_DIR/phase1-tasks"
 mkdir -p "$PHASE1_DIR"
 
 REGION_COUNT=0
-while IFS=$'\t' read -r country region url state code memory; do
+while IFS=$'\t' read -r country region url state code memory bbox; do
     [ -z "$country" ] && continue
     REGION_COUNT=$((REGION_COUNT + 1))
-    printf "%s\t%s\t%s\t%s\t%s\t%s\n" "$country" "$region" "$url" "$state" "$code" "${memory:-$DEFAULT_MEMORY}" > "$PHASE1_DIR/region_${REGION_COUNT}.txt"
+    printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\n" "$country" "$region" "$url" "$state" "$code" "${memory:-$DEFAULT_MEMORY}" "${bbox}" > "$PHASE1_DIR/region_${REGION_COUNT}.txt"
 done < "$ALL_REGIONS"
 
 rm "$ALL_REGIONS"
