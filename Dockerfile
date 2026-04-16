@@ -8,7 +8,9 @@ ENV LC_ALL=C.UTF-8
 
 WORKDIR /work
 
-COPY . /work/
+COPY easybuild.sh generate_map.py README.md /work/
+COPY conf /work/conf
+COPY native_tools /work/native_tools
 
 RUN apt update -qq && apt install -qqy --no-install-recommends \
     # Core tools

@@ -78,7 +78,7 @@ jobs:
             python3 << 'EOF'
             import yaml, json, os
             
-            with open('countries.yml') as f:
+            with open('conf/countries.yml') as f:
                 data = yaml.safe_load(f)
             
             # Map types from map-types.conf
@@ -224,7 +224,7 @@ jobs:
 
         run: |
           set -euo pipefail
-          MAX=$((2048*1024*1024))  # 2 GiB 
+          MAX=$((2300*1024*1024))  # 2 GiB 
           mkdir -p release-zips
 
           for type_dir in release-files/*; do

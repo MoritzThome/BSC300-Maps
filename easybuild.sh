@@ -36,13 +36,15 @@ BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Load map types
 
-source "$BASE_DIR/map-types.conf" || error "Failed to load map-types.conf"
+source "$BASE_DIR/conf/map-types.conf" || error "Failed to load conf/map-types.conf"
 
 TYPES=()
 PARALLEL_JOBS=2
 COUNTRIES=""
 OUTPUT_BASE="output"
-CONFIG_FILE="$BASE_DIR/countries.yml"
+CONFIG_FILE="$BASE_DIR/conf/countries.yml"
+OSMOSIS_VERSION="0.49.2"
+MAPSFORGE_VERSION="0.27.0"
 DEFAULT_MEMORY="8g"
 FAILED_BUILDS="$WORK_DIR/failed_builds.txt"
 touch "$FAILED_BUILDS"
@@ -99,7 +101,7 @@ with open('$CONFIG_FILE', 'r') as f:
     data = yaml.safe_load(f)
     for country in sorted(data['countries'].keys()):
         print(f'    - {country}')
-" 2>/dev/null || echo "    (countries.yml not found)"
+" 2>/dev/null || echo "    (conf/countries.yml not found)"
 }
 
 while getopts "pat:j:c:o:vh" opt; do
@@ -160,11 +162,25 @@ if [ "$PREPARE_ONLY" = true ]; then
     if [ ! -d "$BASE_DIR/osmosis/bin" ] || [ ! -f "$BASE_DIR/osmosis/osmconvert" ]; then
         log "Setting up osmosis and tools..."
         cd "$BASE_DIR"
-        if [ "$VERBOSE" = true ]; then
-            bash setup_env.sh || error "Failed to setup osmosis"
-        else
-            bash setup_env.sh >/dev/null || error "Failed to setup osmosis"
-        fi
+        BIN_DIR=osmosis
+
+        TEMP_DIR="./tmp/"
+        mkdir -p ${TEMP_DIR}
+
+        # Download Osmosis
+
+        curl -L -o ${TEMP_DIR}/osmosis.zip https://github.com/openstreetmap/osmosis/releases/download/${OSMOSIS_VERSION}/osmosis-${OSMOSIS_VERSION}.zip > /dev/null
+        unzip -q ${TEMP_DIR}/osmosis.zip -d ${TEMP_DIR}/osmosis
+        mv ${TEMP_DIR}/osmosis/osmosis*/ ${BIN_DIR}
+
+        mkdir -p "${BIN_DIR}/bin/plugins"
+        curl -L -o "${BIN_DIR}/bin/plugins/mapsforge-map-writer-${MAPSFORGE_VERSION}-jar-with-dependencies.jar" \
+        "https://github.com/mapsforge/mapsforge/releases/download/${MAPSFORGE_VERSION}/mapsforge-map-writer-${MAPSFORGE_VERSION}-jar-with-dependencies.jar" > /dev/null
+
+        # compile native tools
+        gcc native_tools/osmconvert.c -O3 -lz -o osmosis/osmconvert > /dev/null
+        gcc native_tools/osmfilter.c -O3 -lz -o osmosis/osmfilter > /dev/null
+        log "✓ Osmosis installed"
     else
         log "✓ Osmosis already installed"
     fi
@@ -367,7 +383,7 @@ build_type() {
     fi
     
     # Source map-types in subshell
-    source "$BASE_DIR/map-types.conf"
+    source "$BASE_DIR/conf/map-types.conf"
     
     local type_work="${region_work}/${type}"
     mkdir -p "$type_work"
