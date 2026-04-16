@@ -66,11 +66,10 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Install Python
+      - name: Install Python dependencies
 
         run: |
-          sudo apt update 
-          sudo apt install -y python3 python3-yaml
+          pip install pyyaml
       
       - name: Generate matrix
         id: generate
