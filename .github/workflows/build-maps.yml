@@ -76,60 +76,46 @@ jobs:
         run: |
             python3 << 'EOF'
             import yaml, json, os
-            
+
             with open('conf/countries.yml') as f:
                 data = yaml.safe_load(f)
-            
-            # Map types from map-types.conf
-            MAP_TYPES = []
+
             with open('conf/map-types.conf') as f:
-              for line in f:
-                  line = line.strip()
-                  if line.startswith('AVAILABLE_MAP_TYPES='):
-                      MAP_TYPES = line.split('"')[1].split()
-                      break
-            
-            matrix = []
-            large_countries = []
-            normal_countries = []
-            
+                for line in f:
+                    if line.strip().startswith('AVAILABLE_MAP_TYPES='):
+                        MAP_TYPES = line.split('"')[1].split()
+                        break
+
+            large, normal = [], []
+
             for country, config in sorted(data['countries'].items()):
                 is_large = 'memory' in config
-                single_job = config.get('single-job', False)
-                
-                if single_job:
-                    # Create separate job for each map type
-                    for map_type in MAP_TYPES:
-                        entry = {
-                            'country': country,
-                            'display': f"{country} - {map_type}",
-                            'map_type': map_type
-                        }
-                        if is_large:
-                            large_countries.append(entry)
-                        else:
-                            normal_countries.append(entry)
+                bucket = large if is_large else normal
+                regions = config.get('regions', [])
+
+                if config.get('single-job', False):
+                    for region in regions:
+                        for map_type in MAP_TYPES:
+                            bucket.append({
+                                'country': f"{country}/{region['name']}",
+                                'display': f"{country} - {region['name']} - {map_type}",
+                                'map_type': map_type,
+                                'artifact': f"{country}-{region['name']}-{map_type}"
+                            })
                 else:
-                    # Single job for all map types
-                    entry = {
+                    bucket.append({
                         'country': country,
                         'display': country,
-                        'map_type': ''
-                    }
-                    if is_large:
-                        large_countries.append(entry)
-                    else:
-                        normal_countries.append(entry)
-            
-            # Large countries first (longer build time)
-            matrix = large_countries + normal_countries
-            
+                        'map_type': '',
+                        'artifact': country
+                    })
+
+            matrix = large + normal
+
             with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
                 f.write(f"matrix={json.dumps({'include': matrix})}\n")
-            
-            print(f"Generated {len(matrix)} jobs")
-            print(f"- Large countries/types: {len(large_countries)}")
-            print(f"- Normal countries/types: {len(normal_countries)}")
+
+            print(f"Generated {len(matrix)} jobs ({len(large)} large, {len(normal)} normal)")
             EOF
 
   build-maps:
@@ -183,9 +169,9 @@ jobs:
         uses: actions/upload-artifact@v6
         if: always()
         with:
-          name: ${{ matrix.country }}${{ matrix.map_type && format('-{0}', matrix.map_type) || '' }}
+          name: ${{ matrix.artifact }}
           path: /work/output/*/*.map
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 30
 
   combine:

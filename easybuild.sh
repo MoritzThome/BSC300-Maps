@@ -619,7 +619,7 @@ HIGHMEM_TASKS=$(mktemp)
 NORMAL_TASKS=$(mktemp)
 
 for task_file in "$PHASE2_DIR"/task_*.txt; do
-    IFS=$'\t' read -r region_work type code state country region memory < "$task_file"
+    IFS=$'\t' read -r region_work type code state country region memory bbox < "$task_file"
     if [ "$memory" != "$DEFAULT_MEMORY" ]; then
         echo "$task_file" >> "$HIGHMEM_TASKS"
     else
