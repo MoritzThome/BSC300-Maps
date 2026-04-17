@@ -40,6 +40,7 @@ source "$BASE_DIR/conf/map-types.conf" || error "Failed to load conf/map-types.c
 
 TYPES=()
 PARALLEL_JOBS=2
+PARALLEL_DOWNLOAD=8
 COUNTRIES=""
 OUTPUT_BASE="output"
 CONFIG_FILE="$BASE_DIR/conf/countries.yml"
@@ -551,8 +552,8 @@ log "═════════════════════════
 PHASE1_START=$(date +%s)
 
 if command -v parallel >/dev/null && [ "$PARALLEL_JOBS" -gt 1 ]; then
-    log "Using GNU parallel with $PARALLEL_JOBS jobs"
-    ls "$PHASE1_DIR"/region_*.txt | parallel -j "$PARALLEL_JOBS" download_and_convert {} "$WORK_DIR"
+    log "Using GNU parallel with $PARALLEL_DOWNLOAD jobs"
+    ls "$PHASE1_DIR"/region_*.txt | parallel -j "$PARALLEL_DOWNLOAD" download_and_convert {} "$WORK_DIR"
 else
     [ "$PARALLEL_JOBS" -gt 1 ] && warn "GNU parallel not found, using sequential"
     for task_file in "$PHASE1_DIR"/region_*.txt; do
