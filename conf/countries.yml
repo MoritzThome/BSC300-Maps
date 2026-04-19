@@ -35,7 +35,6 @@ countries:
     url: https://download.geofabrik.de/europe/estonia-latest.osm.pbf
   finland:
     code: FI
-    memory: "13g"
     single-job: true
     regions:
       - name: west
