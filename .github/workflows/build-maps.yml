@@ -95,13 +95,12 @@ jobs:
 
                 if config.get('single-job', False):
                     for region in regions:
-                        for map_type in MAP_TYPES:
-                            bucket.append({
-                                'country': f"{country}/{region['name']}",
-                                'display': f"{country} - {region['name']} - {map_type}",
-                                'map_type': map_type,
-                                'artifact': f"{country}-{region['name']}-{map_type}"
-                            })
+                        bucket.append({
+                            'country': f"{country}/{region['name']}",
+                            'display': f"{country} - {region['name']}",
+                            'map_type': '',
+                            'artifact': f"{country}-{region['name']}"
+                        })
                 else:
                     bucket.append({
                         'country': country,
