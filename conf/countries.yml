@@ -42,46 +42,25 @@ countries:
         bbox: "19.0,59.4,27.5,63.0"
       - name: south-a
         url: https://download.geofabrik.de/europe/finland-latest.osm.pbf
-        bbox: "27.5,59.4,27.8,61.5"
+        bbox: "27.5,59.4,28.3,61.5"
       - name: south-b
         url: https://download.geofabrik.de/europe/finland-latest.osm.pbf
-        bbox: "27.8,59.4,28.1,61.5"
-      - name: south-c
-        url: https://download.geofabrik.de/europe/finland-latest.osm.pbf
-        bbox: "28.1,59.4,28.5,61.5"
-      - name: south-d
-        url: https://download.geofabrik.de/europe/finland-latest.osm.pbf
-        bbox: "28.5,59.4,29.5,61.5"
+        bbox: "28.3,59.4,29.5,61.5"
       - name: east
         url: https://download.geofabrik.de/europe/finland-latest.osm.pbf
         bbox: "29.5,59.4,32.0,63.0"
       - name: saimaa-a
         url: https://download.geofabrik.de/europe/finland-latest.osm.pbf
-        bbox: "27.5,61.5,28.1,63.0"
+        bbox: "27.5,61.5,28.7,63.0"
       - name: saimaa-b
         url: https://download.geofabrik.de/europe/finland-latest.osm.pbf
-        bbox: "28.1,61.5,28.4,63.0"
+        bbox: "28.7,61.5,29.1,63.0"
       - name: saimaa-c
         url: https://download.geofabrik.de/europe/finland-latest.osm.pbf
-        bbox: "28.4,61.5,28.7,63.0"
-      - name: saimaa-d
+        bbox: "29.1,61.5,29.5,63.0"
+      - name: north
         url: https://download.geofabrik.de/europe/finland-latest.osm.pbf
-        bbox: "28.7,61.5,29.1,62.0"
-      - name: saimaa-e
-        url: https://download.geofabrik.de/europe/finland-latest.osm.pbf
-        bbox: "29.1,61.5,29.5,62.0"
-      - name: saimaa-f
-        url: https://download.geofabrik.de/europe/finland-latest.osm.pbf
-        bbox: "28.7,62.0,29.1,63.0"
-      - name: saimaa-g
-        url: https://download.geofabrik.de/europe/finland-latest.osm.pbf
-        bbox: "29.1,62.0,29.5,63.0"
-      - name: north-a
-        url: https://download.geofabrik.de/europe/finland-latest.osm.pbf
-        bbox: "19.0,63.0,32.0,66.5"
-      - name: north-b
-        url: https://download.geofabrik.de/europe/finland-latest.osm.pbf
-        bbox: "19.0,66.5,32.0,70.2"
+        bbox: "19.0,63.0,32.0,70.2"
   france:
     code: FR
     regions:
