@@ -4,7 +4,7 @@ on:
   push:
     branches: ["**"]
   schedule:
-    - cron: '6 1 17 * 0'  # Monthly
+    - cron: '6 1 17 * *'  # Monthly
 
   workflow_dispatch:
 
